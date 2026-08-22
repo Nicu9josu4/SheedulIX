@@ -1,0 +1,167 @@
+﻿<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generator Automat de Orar</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .card-header {
+            font-weight: 600;
+        }
+
+        .table-schedule th {
+            background-color: #0d6efd;
+            color: white;
+            text-align: center;
+        }
+
+        .schedule-card {
+            background-color: #e7f1ff;
+            border-left: 4px solid #0d6efd;
+            border-radius: 4px;
+            padding: 8px;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-5">
+        <h2 class="mb-4 text-primary">Generator Automat de Orar (.NET)</h2>
+
+        <!-- Panou Comandă Generare -->
+        <div class="card mb-4 shadow-sm">
+            <div class="card-header bg-white">Parametri Generare</div>
+            <div class="card-body">
+                <form id="generateForm" class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">An Academic</label>
+                        <select class="form-select" id="academicYear">
+                            <option value="3fa85f64-5717-4562-b3fc-2c963f66afa6">2025 - 2026 (Semestrul 1)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Opțiuni Algoritm</label>
+                        <div class="form-check mt-2">
+                            <input class="form-check-input" type="checkbox" id="allowSoftViolations" checked>
+                            <label class="form-check-label" for="allowSoftViolations">
+                                Permite încălcarea constrângerilor secundare (Soft Constraints)
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary" id="btnGenerate">
+                            <span class="spinner-border spinner-border-sm d-none" id="spinner" role="status"></span>
+                            Generare Automat Orar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Rezultate și Statistici -->
+        <div id="resultsContainer" class="d-none">
+            <div class="alert alert-success d-flex justify-content-between align-items-center">
+                <div>
+                    <strong id="scheduleTitle">Orar Generat</strong>
+                    <div class="small">Scor Calitate (Soft Constraints): <span id="softScore">0</span>%</div>
+                </div>
+                <span class="badge bg-success fs-6">Conformitate Hard Constraints: 100%</span>
+            </div>
+
+            <!-- Tabelul Orarului -->
+            <div class="card shadow-sm">
+                <div class="card-body p-0 table-responsive">
+                    <table class="table table-bordered table-schedule mb-0">
+                        <thead>
+                            <tr>
+                                <th>Luni</th>
+                                <th>Marți</th>
+                                <th>Miercuri</th>
+                                <th>Joi</th>
+                                <th>Vineri</th>
+                            </tr>
+                        </thead>
+                        <tbody id="scheduleGrid">
+                            <!-- Se populează dinamic din API -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            $('#generateForm').on('submit', async function (e) {
+                e.preventDefault();
+
+                const $btn = $('#btnGenerate');
+                const $spinner = $('#spinner');
+
+                $btn.prop('disabled', true);
+                $spinner.removeClass('d-none');
+
+                const payload = {
+                    academicYearId: $('#academicYear').val(),
+                    groupIds: ["4fa85f64-5717-4562-b3fc-2c963f66afa6"],
+                    allowSoftConstraintViolations: $('#allowSoftViolations').is(':checked')
+                };
+
+                try {
+                    const response = await $.ajax({
+                        url: `api/schedules/generate`,
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify(payload)
+                    });
+
+                    renderSchedule(response);
+                } catch (err) {
+                    const errorMsg = err.responseJSON?.Message || err.statusText || 'Eroare la generarea orarului';
+                    alert('A apărut o eroare: ' + errorMsg);
+                } finally {
+                    $btn.prop('disabled', false);
+                    $spinner.addClass('d-none');
+                }
+            });
+
+            function renderSchedule(schedule) {
+                $('#scheduleTitle').text(schedule.name);
+                $('#softScore').text(schedule.softConstraintScore);
+                $('#resultsContainer').removeClass('d-none');
+
+                const $grid = $('#scheduleGrid').empty();
+                let rowHtml = '<tr>';
+                const days = [1, 2, 3, 4, 5]; // Luni - Vineri
+
+                days.forEach(day => {
+                    const item = schedule.items.find(x => x.day === day);
+                    if (item) {
+                        rowHtml += `
+                            <td style="vertical-align: top; width: 20%;">
+                                <div class="schedule-card">
+                                    <strong>${item.subjectName}</strong><br>
+                                    <small class="text-muted">${item.startTime.substring(0, 5)} - ${item.endTime.substring(0, 5)}</small><br>
+                                    <div>${item.teacherName}</div>
+                                    <div class="badge bg-secondary mt-1">${item.roomName}</div>
+                                </div>
+                            </td>`;
+                    } else {
+                        rowHtml += '<td></td>';
+                    }
+                });
+
+                rowHtml += '</tr>';
+                $grid.append(rowHtml);
+            }
+        });
+    </script>
+</body>
+</html>
