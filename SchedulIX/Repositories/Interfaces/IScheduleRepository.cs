@@ -13,5 +13,10 @@ namespace SchedulIX.Repositories.Interfaces
         Task<List<Schedule>> GetByRoomAsync(int roomId, CancellationToken ct = default);
         Task<List<Schedule>> GetByGroupAsync(int groupId, CancellationToken ct = default);
         Task<List<Schedule>> GetByTeacherAsync(int teacherId, CancellationToken ct = default);
+        Task<List<AcademicGroup>> GetGroupsByIdsAsync(List<string> groupIds, CancellationToken ct = default);
+        Task<List<Room>> GetAvailableRoomsWithDetailsAsync(CancellationToken ct = default);
+        Task<List<Teacher>> GetTeachersWithPreferencesAsync(CancellationToken ct = default);
+        Task<List<TimeSlot>> GetOrderedTimeSlotsAsync(CancellationToken ct = default);
+        Task<List<Schedule>> GetScheduleItemsByGroupIdsAsync(List<string> groupIds, CancellationToken ct = default);
     }
 }

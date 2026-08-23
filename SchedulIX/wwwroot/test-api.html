@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SchedulIX - Testare API</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            padding: 20px 0;
+        }
+
+        .container-main {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            padding: 40px;
+            margin: 30px auto;
+        }
+
+        .navbar {
+            background: rgba(0, 0, 0, 0.7) !important;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: white !important;
+        }
+
+        .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: 600;
+            border-radius: 10px 10px 0 0 !important;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+        }
+
+        .api-endpoint {
+            background-color: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+
+        .endpoint-method {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 5px;
+            font-weight: 600;
+            margin-right: 10px;
+            font-size: 0.85rem;
+        }
+
+        .method-get { background-color: #cfe2ff; color: #084298; }
+        .method-post { background-color: #d1e7dd; color: #0f5132; }
+        .method-put { background-color: #fff3cd; color: #664d03; }
+        .method-patch { background-color: #e2e3e5; color: #383d41; }
+        .method-delete { background-color: #f8d7da; color: #842029; }
+
+        .endpoint-path {
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .response-box {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .loading-spinner {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 9999;
+        }
+
+        .loading-spinner.active {
+            display: block;
+        }
+
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 9998;
+        }
+
+        .overlay.active {
+            display: block;
+        }
+
+        .page-title {
+            color: white;
+            margin-bottom: 30px;
+            font-weight: 700;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .alert {
+            border-radius: 10px;
+            border: none;
+        }
+
+        .tab-content {
+            margin-top: 20px;
+        }
+
+        .test-request {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        pre {
+            background-color: #282c34;
+            color: #abb2bf;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 0.85rem;
+        }
+
+        code {
+            color: #abb2bf;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <span class="navbar-brand"><i class="fas fa-code"></i> SchedulIX API Tester</span>
+            <div class="ms-auto">
+                <a href="index.html" class="btn btn-light btn-sm">
+                    <i class="fas fa-arrow-left"></i> Înapoi la Dashboard
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Loading Spinner -->
+    <div class="overlay" id="overlay"></div>
+    <div class="loading-spinner" id="loadingSpinner">
+        <div class="spinner-border text-light" role="status" style="width: 3rem; height: 3rem;">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="text-light mt-3">Se procesează...</p>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container container-main">
+        <h1 class="page-title"><i class="fas fa-flask"></i> Instrument Testare API</h1>
+
+        <!-- Alert -->
+        <div id="alertContainer"></div>
+
+        <!-- Tabs Navigation -->
+        <ul class="nav nav-tabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="rooms-tab" data-bs-toggle="tab" data-bs-target="#rooms" type="button">
+                    <i class="fas fa-door-open"></i> Săli
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="schedules-tab" data-bs-toggle="tab" data-bs-target="#schedules" type="button">
+                    <i class="fas fa-timetable"></i> Orare
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="export-tab" data-bs-toggle="tab" data-bs-target="#export" type="button">
+                    <i class="fas fa-download"></i> Export
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="docs-tab" data-bs-toggle="tab" data-bs-target="#docs" type="button">
+                    <i class="fas fa-book"></i> Documentație
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content">
+            <!-- Rooms Tab -->
+            <div class="tab-pane fade show active" id="rooms" role="tabpanel">
+                <h3 class="mt-4">Gestionare Săli</h3>
+
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-list"></i> GET /api/rooms
+                    </div>
+                    <div class="card-body">
+                        <p>Obține lista tuturor sălilor din baza de date</p>
+                        <button class="btn btn-primary btn-sm" onclick="testEndpoint('GET', '/api/rooms')">
+                            <i class="fas fa-play"></i> Testează
+                        </button>
+                        <div id="rooms-list-response" class="response-box mt-3" style="display:none;">
+                            <small><strong>Răspuns:</strong></small>
+                            <pre id="rooms-list-response-content"></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-plus"></i> POST /api/rooms
+                    </div>
+                    <div class="card-body">
+                        <p>Creează o nouă sală</p>
+                        <div class="test-request">
+                            <label class="form-label">Numărul Sălii</label>
+                            <input type="text" id="roomNumber" class="form-control form-control-sm mb-2" placeholder="ex: 201">
+
+                            <label class="form-label">Capacitate</label>
+                            <input type="number" id="roomCapacity" class="form-control form-control-sm mb-2" placeholder="50">
+
+                            <label class="form-label">Tip Sală</label>
+                            <select id="roomType" class="form-select form-select-sm">
+                                <option value="1">Curs</option>
+                                <option value="2">Laborator</option>
+                                <option value="3">Seminar</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-success btn-sm" onclick="testCreateRoom()">
+                            <i class="fas fa-play"></i> Testează
+                        </button>
+                        <div id="rooms-create-response" class="response-box mt-3" style="display:none;">
+                            <small><strong>Răspuns:</strong></small>
+                            <pre id="rooms-create-response-content"></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-door-open"></i> GET /api/rooms/{id}/calendar
+                    </div>
+                    <div class="card-body">
+                        <p>Obține calendarul de ocupare al unei săli</p>
+                        <div class="test-request">
+                            <label class="form-label">ID Sală</label>
+                            <input type="text" id="roomIdCalendar" class="form-control form-control-sm" placeholder="Introduceți ID-ul sălii">
+                        </div>
+                        <button class="btn btn-primary btn-sm" onclick="testEndpoint('GET', '/api/rooms/' + document.getElementById('roomIdCalendar').value + '/calendar')">
+                            <i class="fas fa-play"></i> Testează
+                        </button>
+                        <div id="rooms-calendar-response" class="response-box mt-3" style="display:none;">
+                            <small><strong>Răspuns:</strong></small>
+                            <pre id="rooms-calendar-response-content"></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Schedules Tab -->
+            <div class="tab-pane fade" id="schedules" role="tabpanel">
+                <h3 class="mt-4">Gestionare Orare</h3>
+
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-magic"></i> POST /api/schedules/generate
+                    </div>
+                    <div class="card-body">
+                        <p>Generează automat un orar</p>
+                        <div class="test-request">
+                            <label class="form-label">ID An Academic</label>
+                            <input type="text" id="academicYearId" class="form-control form-control-sm mb-2" placeholder="UUID" value="3fa85f64-5717-4562-b3fc-2c963f66afa6">
+
+                            <label class="form-label">IDs Grupe (CSV)</label>
+                            <input type="text" id="groupIds" class="form-control form-control-sm mb-2" placeholder="id1, id2, id3">
+
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="allowSoftViolations">
+                                <label class="form-check-label" for="allowSoftViolations">
+                                    Permite încălcări constrângeri soft
+                                </label>
+                            </div>
+                        </div>
+                        <button class="btn btn-success btn-sm" onclick="testGenerateSchedule()">
+                            <i class="fas fa-play"></i> Testează
+                        </button>
+                        <div id="schedules-generate-response" class="response-box mt-3" style="display:none;">
+                            <small><strong>Răspuns:</strong></small>
+                            <pre id="schedules-generate-response-content"></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-calendar"></i> GET /api/schedules/{id}
+                    </div>
+                    <div class="card-body">
+                        <p>Obține detaliile unui orar</p>
+                        <div class="test-request">
+                            <label class="form-label">ID Orar</label>
+                            <input type="text" id="scheduleId" class="form-control form-control-sm" placeholder="UUID">
+                        </div>
+                        <button class="btn btn-primary btn-sm" onclick="testEndpoint('GET', '/api/schedules/' + document.getElementById('scheduleId').value)">
+                            <i class="fas fa-play"></i> Testează
+                        </button>
+                        <div id="schedules-get-response" class="response-box mt-3" style="display:none;">
+                            <small><strong>Răspuns:</strong></small>
+                            <pre id="schedules-get-response-content"></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Export Tab -->
+            <div class="tab-pane fade" id="export" role="tabpanel">
+                <h3 class="mt-4">Export</h3>
+
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-file-excel"></i> GET /api/export/excel
+                    </div>
+                    <div class="card-body">
+                        <p>Exportă orarul complet în Excel</p>
+                        <button class="btn btn-success btn-sm" onclick="testFileDownload('/api/export/excel', 'Orar.xlsx')">
+                            <i class="fas fa-download"></i> Descarcă
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-file-pdf"></i> GET /api/export/pdf
+                    </div>
+                    <div class="card-body">
+                        <p>Exportă orarul complet în PDF</p>
+                        <button class="btn btn-danger btn-sm" onclick="testFileDownload('/api/export/pdf', 'Orar.pdf')">
+                            <i class="fas fa-download"></i> Descarcă
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-door-open"></i> GET /api/export/room/{roomId}/excel
+                    </div>
+                    <div class="card-body">
+                        <p>Exportă calendarul unei săli în Excel</p>
+                        <div class="test-request">
+                            <label class="form-label">ID Sală</label>
+                            <input type="text" id="roomIdExport" class="form-control form-control-sm" placeholder="UUID">
+                        </div>
+                        <button class="btn btn-info btn-sm" onclick="testFileDownload('/api/export/room/' + document.getElementById('roomIdExport').value + '/excel', 'Calendar_Sala.xlsx')">
+                            <i class="fas fa-download"></i> Descarcă
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Documentation Tab -->
+            <div class="tab-pane fade" id="docs" role="tabpanel">
+                <h3 class="mt-4">Documentație API</h3>
+
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    <strong>Swagger UI:</strong> Accesează <code>/swagger</code> pentru documentația interactivă completă
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        API Base URL
+                    </div>
+                    <div class="card-body">
+                        <code>${window.location.origin}/api</code>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        Endpoint-uri Disponibile (11)
+                    </div>
+                    <div class="card-body">
+                        <h6 class="mb-3">Săli (6 endpoint-uri)</h6>
+                        <div class="api-endpoint">
+                            <span class="endpoint-method method-get">GET</span>
+                            <span class="endpoint-path">/api/rooms</span>
+                            <small class="d-block mt-2">Obține lista tuturor sălilor</small>
+                        </div>
+                        <div class="api-endpoint">
+                            <span class="endpoint-method method-get">GET</span>
+                            <span class="endpoint-path">/api/rooms/{id}</span>
+                            <small class="d-block mt-2">Obține detaliile unei săli</small>
+                        </div>
+                        <div class="api-endpoint">
+                            <span class="endpoint-method method-get">GET</span>
+                            <span class="endpoint-path">/api/rooms/{id}/calendar</span>
+                            <small class="d-block mt-2">Obține calendarul de ocupare al unui sală</small>
+                        </div>
+                        <div class="api-endpoint">
+                            <span class="endpoint-method method-post">POST</span>
+                            <span class="endpoint-path">/api/rooms</span>
+                            <small class="d-block mt-2">Creează o nouă sală</small>
+                        </div>
+                        <div class="api-endpoint">
+                            <span class="endpoint-method method-put">PUT</span>
+                            <span class="endpoint-path">/api/rooms/{id}</span>
+                            <small class="d-block mt-2">Actualizează o sală existentă</small>
+                        </div>
+                        <div class="api-endpoint">
+                            <span class="endpoint-method method-patch">PATCH</span>
+                            <span class="endpoint-path">/api/rooms/{id}/status</span>
+                            <small class="d-block mt-2">Schimbă statusul unei săli</small>
+                        </div>
+
+                        <h6 class="mb-3 mt-4">Orare (3 endpoint-uri)</h6>
+                        <div class="api-endpoint">
+                            <span class="endpoint-method method-post">POST</span>
+                            <span class="endpoint-path">/api/schedules/generate</span>
+                            <small class="d-block mt-2">Generează orar automat</small>
+                        </div>
+                        <div class="api-endpoint">
+                            <span class="endpoint-method method-get">GET</span>
+                            <span class="endpoint-path">/api/schedules/{id}</span>
+                            <small class="d-block mt-2">Obține detaliile unui orar</small>
+                        </div>
+                        <div class="api-endpoint">
+                            <span class="endpoint-method method-post">POST</span>
+                            <span class="endpoint-path">/api/schedules/validate</span>
+                            <small class="d-block mt-2">Validează un orar</small>
+                        </div>
+
+                        <h6 class="mb-3 mt-4">Export (3 endpoint-uri)</h6>
+                        <div class="api-endpoint">
+                            <span class="endpoint-method method-get">GET</span>
+                            <span class="endpoint-path">/api/export/excel</span>
+                            <small class="d-block mt-2">Exportă orarul complet în Excel</small>
+                        </div>
+                        <div class="api-endpoint">
+                            <span class="endpoint-method method-get">GET</span>
+                            <span class="endpoint-path">/api/export/pdf</span>
+                            <small class="d-block mt-2">Exportă orarul complet în PDF</small>
+                        </div>
+                        <div class="api-endpoint">
+                            <span class="endpoint-method method-get">GET</span>
+                            <span class="endpoint-path">/api/export/room/{roomId}/excel</span>
+                            <small class="d-block mt-2">Exportă calendarul unei săli în Excel</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/api-client.js"></script>
+    <script>
+        const API_BASE_URL = window.location.origin;
+
+        function showLoading(show = true) {
+            const spinner = document.getElementById('loadingSpinner');
+            const overlay = document.getElementById('overlay');
+
+            if (show) {
+                spinner.classList.add('active');
+                overlay.classList.add('active');
+            } else {
+                spinner.classList.remove('active');
+                overlay.classList.remove('active');
+            }
+        }
+
+        function showAlert(type, message) {
+            const container = document.getElementById('alertContainer');
+            const alertId = 'alert-' + Date.now();
+
+            const alert = document.createElement('div');
+            alert.id = alertId;
+            alert.className = `alert alert-${type} alert-dismissible fade show`;
+            alert.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+
+            container.insertBefore(alert, container.firstChild);
+
+            setTimeout(() => {
+                const el = document.getElementById(alertId);
+                if (el) el.remove();
+            }, 5000);
+        }
+
+        function formatJson(obj) {
+            return JSON.stringify(obj, null, 2);
+        }
+
+        async function testEndpoint(method, endpoint) {
+            try {
+                showLoading(true);
+
+                const url = API_BASE_URL + endpoint;
+                const response = await fetch(url, { method });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                const responseKey = endpoint.replace(/[^a-z0-9]/gi, '-').toLowerCase() + '-response-content';
+                const responseContainer = document.getElementById(responseKey.replace('-content', ''));
+                const responseContent = document.getElementById(responseKey);
+
+                if (responseContainer && responseContent) {
+                    responseContent.textContent = formatJson(data);
+                    responseContainer.style.display = 'block';
+                }
+
+                showAlert('success', 'Cerere reușită!');
+
+            } catch (error) {
+                showAlert('danger', `Eroare: ${error.message}`);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function testCreateRoom() {
+            try {
+                showLoading(true);
+
+                const roomData = {
+                    roomNumber: document.getElementById('roomNumber').value,
+                    capacity: parseInt(document.getElementById('roomCapacity').value),
+                    roomTypeId: parseInt(document.getElementById('roomType').value),
+                    availabilities: []
+                };
+
+                const response = await fetch(API_BASE_URL + '/api/rooms', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(roomData)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                document.getElementById('rooms-create-response-content').textContent = formatJson(data);
+                document.getElementById('rooms-create-response').style.display = 'block';
+
+                showAlert('success', 'Sală creată cu succes!');
+
+            } catch (error) {
+                showAlert('danger', `Eroare: ${error.message}`);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function testGenerateSchedule() {
+            try {
+                showLoading(true);
+
+                const request = {
+                    academicYearId: document.getElementById('academicYearId').value,
+                    groupIds: document.getElementById('groupIds').value.split(',').map(id => id.trim()),
+                    allowSoftConstraintViolations: document.getElementById('allowSoftViolations').checked
+                };
+
+                const response = await fetch(API_BASE_URL + '/api/schedules/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(request)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                document.getElementById('schedules-generate-response-content').textContent = formatJson(data);
+                document.getElementById('schedules-generate-response').style.display = 'block';
+
+                showAlert('success', 'Orar generat cu succes!');
+
+            } catch (error) {
+                showAlert('danger', `Eroare: ${error.message}`);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function testFileDownload(endpoint, filename) {
+            try {
+                showLoading(true);
+
+                const response = await fetch(API_BASE_URL + endpoint);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(url);
+
+                showAlert('success', 'Fișier descarcate cu succes!');
+
+            } catch (error) {
+                showAlert('danger', `Eroare: ${error.message}`);
+            } finally {
+                showLoading(false);
+            }
+        }
+    </script>
+</body>
+</html>

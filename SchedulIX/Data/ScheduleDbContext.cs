@@ -3,10 +3,8 @@ using SchedulIX.Models.Entities;
 
 namespace SchedulIX.Data
 {
-    public class ScheduleDbContext : DbContext
+    public class ScheduleDbContext(DbContextOptions<ScheduleDbContext> options) : DbContext(options)
     {
-        public ScheduleDbContext(DbContextOptions<ScheduleDbContext> options) : base(options) { }
-
         public DbSet<RoomType> RoomTypes { get; set; } = null!;
         public DbSet<Room> Rooms { get; set; } = null!;
         public DbSet<RoomAvailability> RoomAvailabilities { get; set; } = null!;

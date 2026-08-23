@@ -18,7 +18,8 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
     ?? "Server=(localdb)\\mssqllocaldb;Database=schedulix_db;Trusted_Connection=true;";
 
 builder.Services.AddDbContext<ScheduleDbContext>(options =>
-    options.UseSqlServer(connectionString)
+    options.UseNpgsql(connectionString)
+//options.UseSqlServer(connectionString)
 );
 
 // Register Services

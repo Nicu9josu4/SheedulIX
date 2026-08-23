@@ -29,9 +29,11 @@ namespace SchedulIX.Controllers
         /// </summary>
         [HttpPost("generate")]
         [ProducesResponseType(typeof(ScheduleDto), StatusCodes.Status201Created)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> Generate([FromBody] GenerateScheduleRequestDto request, CancellationToken ct)
         {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
             if (request.GroupIds is null || !request.GroupIds.Any())
             {
                 return BadRequest(new { Message = "Trebuie să selectați cel puțin o grupă de studenți." });

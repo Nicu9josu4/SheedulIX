@@ -12,7 +12,7 @@ namespace SchedulIX.Models.Entities
         public int DayOfWeek { get; set; } // 1-6
         public int TimeSlotNumber { get; set; }
         public int WeekType { get; set; } // 0 = All, 1 = Even, 2 = Odd
-        public string ClassType { get; set; } = null!; // "Course", "Seminar", "Lab"
+        public string? ClassType { get; set; } = null!; // "Course", "Seminar", "Lab"
         public DateTime CreatedAt { get; set; }
 
         public virtual Discipline Discipline { get; set; } = null!;
