@@ -40,5 +40,23 @@ namespace SchedulIX.Controllers
             var result = await scheduleService.GenerateScheduleAsync(request, ct);
             return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
         }
+
+        /// <summary>
+        /// Validează o programare (verifi dacă respectă regulile)
+        /// </summary>
+        [HttpPost("validate")]
+        [ProducesResponseType(typeof(ValidationResultDto), StatusCodes.Status200OK)]
+        public async Task<IActionResult> Validate([FromBody] ScheduleDto schedule, CancellationToken ct)
+        {
+            var result = await scheduleService.ValidateScheduleAsync(schedule, ct);
+            return Ok(result);
+        }
     }
+
+    public record ValidationResultDto(
+        bool IsValid,
+        List<string> Violations,
+        int HardConstraintViolations,
+        int SoftConstraintScore
+    );
 }
