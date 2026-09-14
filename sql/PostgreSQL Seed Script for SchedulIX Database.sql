@@ -5,6 +5,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- 1. DROP EXISTING TABLES (In Dependent Order)
 -- ==========================================
 DROP TABLE IF EXISTS "Schedules" CASCADE;
+DROP TABLE IF EXISTS "Students" CASCADE;
 DROP TABLE IF EXISTS "Subgroups" CASCADE;
 DROP TABLE IF EXISTS "AcademicGroups" CASCADE;
 DROP TABLE IF EXISTS "TeacherPreferences" CASCADE;
@@ -125,7 +126,21 @@ CREATE TABLE "Subgroups" (
         FOREIGN KEY ("GroupId") REFERENCES "AcademicGroups"("Id") ON DELETE CASCADE
 );
 
--- 12. Schedules
+-- 12. Students
+CREATE TABLE "Students" (
+    "Id" INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    "FirstName" VARCHAR(100) NOT NULL,
+    "LastName" VARCHAR(100) NOT NULL,
+    "Email" VARCHAR(255) NOT NULL UNIQUE,
+    "GroupId" INT NOT NULL,
+    "SubgroupId" INT NULL,
+    CONSTRAINT "FK_Students_AcademicGroups_GroupId" 
+        FOREIGN KEY ("GroupId") REFERENCES "AcademicGroups"("Id") ON DELETE CASCADE,
+    CONSTRAINT "FK_Students_Subgroups_SubgroupId" 
+        FOREIGN KEY ("SubgroupId") REFERENCES "Subgroups"("Id") ON DELETE SET NULL
+);
+
+-- 13. Schedules
 CREATE TABLE "Schedules" (
     "Id" INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     "DisciplineId" INT NOT NULL,
@@ -223,7 +238,13 @@ INSERT INTO "Subgroups" ("Name", "GroupId", "StudentCount") VALUES
 ('CR-211-A', 1, 15),
 ('CR-211-B', 1, 15);
 
--- 12. Schedules
+-- 12. Students
+INSERT INTO "Students" ("FirstName", "LastName", "Email", "GroupId", "SubgroupId") VALUES
+('Andrei', 'Vasile', 'andrei.vasile@student.university.edu', 1, 1),
+('Elena', 'Radu', 'elena.radu@student.university.edu', 1, 2),
+('Mihai', 'Stan', 'mihai.stan@student.university.edu', 2, NULL);
+
+-- 13. Schedules
 INSERT INTO "Schedules" ("DisciplineId", "TeacherId", "RoomId", "GroupId", "SubgroupId", "SeriesId", "DayOfWeek", "TimeSlotNumber", "WeekType", "ClassType") VALUES
 (1, 1, 4, 1, 1, 1, 1, 1, 0, 'Lab'),
 (2, 2, 2, 1, NULL, 1, 1, 2, 0, 'Curs'),

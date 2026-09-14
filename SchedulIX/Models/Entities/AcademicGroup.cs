@@ -10,6 +10,7 @@ namespace SchedulIX.Models.Entities
         public virtual EducationForm EducationForm { get; set; } = null!;
         public virtual Series? Series { get; set; }
         public virtual ICollection<Subgroup> Subgroups { get; set; } = new List<Subgroup>();
+        public virtual ICollection<Student> Students { get; set; } = new List<Student>();
         public virtual ICollection<Schedule> Schedules { get; set; } = new List<Schedule>();
     }
 }

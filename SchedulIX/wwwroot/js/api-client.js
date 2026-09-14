@@ -9,6 +9,112 @@ class ScheduleAPIClient {
         this.baseUrl = `${API_BASE_URL}/api`;
     }
 
+    // ===== STUDENTS / GROUPS / TEACHERS ENDPOINTS =====
+
+    /**
+     * GET /api/students
+     * Get all students
+     */
+    async getStudents() {
+        return this.request('/students');
+    }
+
+    async getStudent(id) {
+        return this.request(`/students/${id}`);
+    }
+
+    async createStudent(student) {
+        return this.request('/students', {
+            method: 'POST',
+            body: JSON.stringify(student)
+        });
+    }
+
+    async updateStudent(id, student) {
+        return this.request(`/students/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(student)
+        });
+    }
+
+    async deleteStudent(id) {
+        return this.request(`/students/${id}`, {
+            method: 'DELETE'
+        });
+    }
+
+    /**
+     * GET /api/groups
+     * Get all groups
+     */
+    async getGroups() {
+        return this.request('/groups');
+    }
+
+    /**
+     * GET /api/educationforms
+     * Get all education forms
+     */
+    async getEducationForms() {
+        return this.request('/educationforms');
+    }
+
+    async getGroup(id) {
+        return this.request(`/groups/${id}`);
+    }
+
+    async createGroup(group) {
+        return this.request('/groups', {
+            method: 'POST',
+            body: JSON.stringify(group)
+        });
+    }
+
+    async updateGroup(id, group) {
+        return this.request(`/groups/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(group)
+        });
+    }
+
+    async deleteGroup(id) {
+        return this.request(`/groups/${id}`, {
+            method: 'DELETE'
+        });
+    }
+
+    /**
+     * GET /api/teachers
+     * Get all teachers
+     */
+    async getTeachers() {
+        return this.request('/teachers');
+    }
+
+    async getTeacher(id) {
+        return this.request(`/teachers/${id}`);
+    }
+
+    async createTeacher(teacher) {
+        return this.request('/teachers', {
+            method: 'POST',
+            body: JSON.stringify(teacher)
+        });
+    }
+
+    async updateTeacher(id, teacher) {
+        return this.request(`/teachers/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(teacher)
+        });
+    }
+
+    async deleteTeacher(id) {
+        return this.request(`/teachers/${id}`, {
+            method: 'DELETE'
+        });
+    }
+
     /**
      * Generic AJAX wrapper returning a Promise
      */

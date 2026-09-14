@@ -8,5 +8,6 @@ namespace SchedulIX.Models.Entities
 
         public virtual AcademicGroup Group { get; set; } = null!;
         public virtual ICollection<Schedule> Schedules { get; set; } = new List<Schedule>();
+        public virtual ICollection<Student> Students { get; set; } = new List<Student>();
     }
 }

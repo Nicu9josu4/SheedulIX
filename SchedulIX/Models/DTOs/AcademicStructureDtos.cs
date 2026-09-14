@@ -37,9 +37,7 @@ namespace SchedulIX.Models.DTOs
 
     public record EducationFormDto(
         int Id,
-        string Name,
-        int Year,
-        int Semester
+        string Name
     );
 
     public record CreateEducationFormRequest(

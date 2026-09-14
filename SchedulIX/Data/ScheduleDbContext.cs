@@ -14,6 +14,7 @@ namespace SchedulIX.Data
         public DbSet<TimeSlot> TimeSlots { get; set; } = null!;
         public DbSet<AcademicGroup> AcademicGroups { get; set; } = null!;
         public DbSet<Subgroup> Subgroups { get; set; } = null!;
+        public DbSet<Student> Students { get; set; } = null!;
         public DbSet<Series> Series { get; set; } = null!;
         public DbSet<EducationForm> EducationForms { get; set; } = null!;
         public DbSet<Schedule> Schedules { get; set; } = null!;
@@ -74,6 +75,19 @@ namespace SchedulIX.Data
                 .WithMany(ag => ag.Subgroups)
                 .HasForeignKey(s => s.GroupId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // Students table relations
+            modelBuilder.Entity<Student>()
+                .HasOne(s => s.Group)
+                .WithMany(ag => ag.Students)
+                .HasForeignKey(s => s.GroupId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Student>()
+                .HasOne(s => s.Subgroup)
+                .WithMany(sg => sg.Students)
+                .HasForeignKey(s => s.SubgroupId)
+                .OnDelete(DeleteBehavior.SetNull);
 
             modelBuilder.Entity<Schedule>()
                 .HasOne(sc => sc.Discipline)

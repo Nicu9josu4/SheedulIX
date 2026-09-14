@@ -262,7 +262,7 @@
                             <i class="fas fa-timetable"></i> Orar
                         </a>
                     </li>
-                    <li class="nav-item">
+                    <li class="nav-item" style="display:none;">
                         <a class="nav-link" href="#" onclick="showPage('export')">
                             <i class="fas fa-download"></i> Export
                         </a>
@@ -310,44 +310,47 @@
                         </div>
                     </div>
                 </div>
+
                 <div class="col-md-3 mb-3">
                     <div class="card text-center">
                         <div class="card-body">
-                            <div class="feature-icon text-info">
-                                <i class="fas fa-timetable"></i>
+                            <div class="feature-icon text-primary">
+                                <i class="fas fa-user-graduate"></i>
                             </div>
-                            <h5 class="card-title">Orare</h5>
-                            <p class="card-text display-6" id="scheduleCount">0</p>
-                            <button class="btn btn-sm btn-outline-primary" onclick="showPage('schedule')">
+                            <h5 class="card-title">Studenți</h5>
+                            <p class="card-text display-6" id="studentCount">0</p>
+                            <button class="btn btn-sm btn-outline-primary" onclick="showPage('students')">
                                 Gestionează
                             </button>
                         </div>
                     </div>
                 </div>
+
                 <div class="col-md-3 mb-3">
                     <div class="card text-center">
                         <div class="card-body">
-                            <div class="feature-icon text-warning">
-                                <i class="fas fa-exclamation-triangle"></i>
+                            <div class="feature-icon text-info">
+                                <i class="fas fa-users"></i>
                             </div>
-                            <h5 class="card-title">Status</h5>
-                            <p class="card-text" id="statusText">Conectat</p>
-                            <button class="btn btn-sm btn-outline-primary" onclick="checkApiStatus()">
-                                Verifică
+                            <h5 class="card-title">Grupe</h5>
+                            <p class="card-text display-6" id="groupCount">0</p>
+                            <button class="btn btn-sm btn-outline-primary" onclick="showPage('groups')">
+                                Gestionează
                             </button>
                         </div>
                     </div>
                 </div>
+
                 <div class="col-md-3 mb-3">
                     <div class="card text-center">
                         <div class="card-body">
-                            <div class="feature-icon text-danger">
-                                <i class="fas fa-download"></i>
+                            <div class="feature-icon text-secondary">
+                                <i class="fas fa-chalkboard-teacher"></i>
                             </div>
-                            <h5 class="card-title">Export</h5>
-                            <p class="card-text">Excel / PDF</p>
-                            <button class="btn btn-sm btn-outline-primary" onclick="showPage('export')">
-                                Exportă
+                            <h5 class="card-title">Profesori</h5>
+                            <p class="card-text display-6" id="teacherCount">0</p>
+                            <button class="btn btn-sm btn-outline-primary" onclick="showPage('teachers')">
+                                Gestionează
                             </button>
                         </div>
                     </div>
@@ -383,7 +386,7 @@
                     <form id="addRoomForm" class="row g-3">
                         <div class="col-md-4">
                             <label class="form-label">Numărul Sălii</label>
-                            <input type="text" class="form-control" id="roomNumber" placeholder="ex: 201" required>
+                            <input type="text" class="form-control" id="roomNumber" placeholder="ex: 3-201" required>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Capacitate</label>
@@ -566,6 +569,156 @@
         </div>
 
         <!-- API Documentation Page -->
+        <!-- Students Page -->
+        <div id="students" class="page-section">
+            <h1 class="page-title"><i class="fas fa-user-graduate"></i> Gestionare Studenți</h1>
+
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-list"></i> Lista Studenți
+                    <button class="btn btn-sm btn-light float-end" onclick="loadStudents()">
+                        <i class="fas fa-sync"></i> Reîncarcă
+                    </button>
+                </div>
+                <div class="card-body">
+                    <form id="addStudentForm" class="row g-3 mb-3">
+                        <div class="col-md-3">
+                            <input class="form-control" id="studentAddFirstName" placeholder="Prenume" required />
+                        </div>
+                        <div class="col-md-3">
+                            <input class="form-control" id="studentAddLastName" placeholder="Nume" required />
+                        </div>
+                        <div class="col-md-3">
+                            <input type="email" class="form-control" id="studentAddEmail" placeholder="email@domain" required />
+                        </div>
+                        <div class="col-md-3 position-relative">
+                            <input type="text" class="form-control" id="studentAddGroupSearch" placeholder="Caută grupă sau tastează (ex: CR-)" autocomplete="off" required />
+                            <input type="hidden" id="studentAddGroupId" />
+                            <div id="studentGroupSuggestions" class="list-group position-absolute w-100 mt-1" style="z-index:1000; display:none;"></div>
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Adaugă Student</button>
+                        </div>
+                    </form>
+                    <div id="studentsList" class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nume</th>
+                                    <th>Prenume</th>
+                                    <th>Acțiuni</th>
+                                </tr>
+                            </thead>
+                            <tbody id="studentsTableBody">
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">Se încarcă studenții...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <button class="btn btn-secondary mt-3" onclick="showPage('dashboard')">Înapoi la Dashboard</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Groups Page -->
+        <div id="groups" class="page-section">
+            <h1 class="page-title"><i class="fas fa-users"></i> Gestionare Grupe</h1>
+
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-list"></i> Lista Grupe
+                    <div class="float-end">
+                        <button class="btn btn-sm btn-light" onclick="loadGroups()">
+                            <i class="fas fa-sync"></i> Reîncarcă
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <form id="addGroupForm" class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <input class="form-control" id="groupAddName" placeholder="Nume grupă" required />
+                        </div>
+                        <div class="col-md-4">
+                            <select class="form-select" id="groupAddEducationFormId" required>
+                                <option value="">Selectează Forma Educațională...</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Adaugă Grupă</button>
+                        </div>
+                    </form>
+                    <div id="groupsList" class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nume Grupă</th>
+                                    <th>Acțiuni</th>
+                                </tr>
+                            </thead>
+                            <tbody id="groupsTableBody">
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted">Se încarcă grupele...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <button class="btn btn-secondary mt-3" onclick="showPage('dashboard')">Înapoi la Dashboard</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Teachers Page -->
+        <div id="teachers" class="page-section">
+            <h1 class="page-title"><i class="fas fa-chalkboard-teacher"></i> Gestionare Profesori</h1>
+
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-list"></i> Lista Profesori
+                    <div class="float-end">
+                        <button class="btn btn-sm btn-light" onclick="loadTeachers()">
+                            <i class="fas fa-sync"></i> Reîncarcă
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <form id="addTeacherForm" class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <input class="form-control" id="teacherAddFirstName" placeholder="Prenume" required />
+                        </div>
+                        <div class="col-md-4">
+                            <input class="form-control" id="teacherAddLastName" placeholder="Nume" required />
+                        </div>
+                        <div class="col-md-3">
+                            <input type="email" class="form-control" id="teacherAddEmail" placeholder="email@domain" required />
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Adaugă Profesor</button>
+                        </div>
+                    </form>
+                    <div id="teachersList" class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nume</th>
+                                    <th>Acțiuni</th>
+                                </tr>
+                            </thead>
+                            <tbody id="teachersTableBody">
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted">Se încarcă profesori...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <button class="btn btn-secondary mt-3" onclick="showPage('dashboard')">Înapoi la Dashboard</button>
+                </div>
+            </div>
+        </div>
+
         <div id="api" class="page-section">
             <h1 class="page-title"><i class="fas fa-code"></i> Documentație API</h1>
 

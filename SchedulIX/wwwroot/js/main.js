@@ -77,6 +77,12 @@ function showPage(pageId) {
         loadRoomsForExport();
     } else if (pageId === 'dashboard') {
         loadDashboardData();
+    } else if (pageId === 'students') {
+        loadStudents();
+    } else if (pageId === 'groups') {
+        loadGroups();
+    } else if (pageId === 'teachers') {
+        loadTeachers();
     }
 }
 
@@ -108,6 +114,90 @@ function getRoomTypeName(typeId) {
 
 // ===== PAGE: DASHBOARD =====
 
+// Caches for client-side comboboxes
+let groupsCache = [];
+let educationFormsCache = [];
+
+async function loadGroupsCache() {
+    try {
+        groupsCache = Array.isArray(await apiClient.getGroups()) ? await apiClient.getGroups() : [];
+    } catch (err) {
+        groupsCache = [];
+        console.warn('Failed to load groups cache', err.message);
+    }
+}
+
+async function loadEducationForms() {
+    try {
+        educationFormsCache = Array.isArray(await apiClient.getEducationForms()) ? await apiClient.getEducationForms() : [];
+
+        // populate addGroup select if present
+        const addSelect = document.getElementById('groupAddEducationFormId');
+        if (addSelect) {
+            addSelect.innerHTML = '<option value="">Selectează Forma Educațională...</option>' +
+                educationFormsCache.map(e => `<option value="${e.id}">${escapeHtml(e.name)} </option>`).join('');
+        }
+
+        // populate modal select if present
+        const modalSelect = document.getElementById('groupEducationFormId');
+        if (modalSelect) {
+            modalSelect.innerHTML = '<option value="">Selectează Forma Educațională...</option>' +
+                educationFormsCache.map(e => `<option value="${e.id}">${escapeHtml(e.name)} </option>`).join('');
+        }
+    } catch (err) {
+        educationFormsCache = [];
+        console.warn('Failed to load education forms', err.message);
+    }
+}
+
+function setupStudentGroupCombobox() {
+    const input = document.getElementById('studentAddGroupSearch');
+    const hidden = document.getElementById('studentAddGroupId');
+    const suggestions = document.getElementById('studentGroupSuggestions');
+    if (!input || !hidden || !suggestions) return;
+
+    input.addEventListener('input', () => {
+        const q = input.value.trim().toLowerCase();
+        if (!q) {
+            suggestions.style.display = 'none';
+            suggestions.innerHTML = '';
+            hidden.value = '';
+            return;
+        }
+
+        const matches = groupsCache.filter(g => (g.name || '').toLowerCase().includes(q)).slice(0, 10);
+        if (matches.length === 0) {
+            suggestions.style.display = 'none';
+            suggestions.innerHTML = '';
+            hidden.value = '';
+            return;
+        }
+
+        suggestions.innerHTML = matches.map(g => `
+            <button type="button" class="list-group-item list-group-item-action" data-id="${g.id}">${escapeHtml(g.name)}</button>
+        `).join('');
+        suggestions.style.display = 'block';
+
+        suggestions.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const id = btn.getAttribute('data-id');
+                const name = btn.textContent;
+                hidden.value = id;
+                input.value = name;
+                suggestions.style.display = 'none';
+            });
+        });
+    });
+
+    // hide on outside click
+    document.addEventListener('click', (e) => {
+        if (!input.contains(e.target) && !suggestions.contains(e.target)) {
+            suggestions.style.display = 'none';
+        }
+    });
+}
+
+
 async function loadDashboardData() {
     try {
         showLoading(true);
@@ -117,9 +207,434 @@ async function loadDashboardData() {
         const roomCount = Array.isArray(rooms) ? rooms.length : 0;
         document.getElementById('roomCount').textContent = roomCount;
 
+        // Load students, groups and teachers counts (if endpoints exist)
+        try {
+            const students = await apiClient.getStudents();
+            const studentCount = Array.isArray(students) ? students.length : 0;
+            const el = document.getElementById('studentCount');
+            if (el) el.textContent = studentCount;
+        } catch (err) {
+            // silently ignore if endpoint not present
+            console.warn('getStudents failed', err.message);
+        }
+
+        try {
+            const groups = await apiClient.getGroups();
+            const groupCount = Array.isArray(groups) ? groups.length : 0;
+            const el = document.getElementById('groupCount');
+            if (el) el.textContent = groupCount;
+        } catch (err) {
+            console.warn('getGroups failed', err.message);
+        }
+
+        try {
+            const teachers = await apiClient.getTeachers();
+            const teacherCount = Array.isArray(teachers) ? teachers.length : 0;
+            const el = document.getElementById('teacherCount');
+            if (el) el.textContent = teacherCount;
+        } catch (err) {
+            console.warn('getTeachers failed', err.message);
+        }
+
         showAlert('info', 'Dashboard actualizat cu succes!');
     } catch (error) {
         showAlert('danger', `Eroare la încărcare dashboard: ${error.message}`);
+    } finally {
+        showLoading(false);
+    }
+}
+
+// ===== PAGE: STUDENTS / GROUPS / TEACHERS =====
+
+async function loadStudents() {
+    try {
+        showLoading(true);
+        const students = await apiClient.getStudents();
+        const tableBody = document.getElementById('studentsTableBody');
+        const countEl = document.getElementById('studentCount');
+
+        const count = Array.isArray(students) ? students.length : 0;
+        if (countEl) countEl.textContent = count;
+
+        if (!Array.isArray(students) || students.length === 0) {
+            tableBody.innerHTML = `
+                <tr><td colspan="4" class="text-center text-muted">Nu sunt studenți în baza de date</td></tr>
+            `;
+            return;
+        }
+
+        tableBody.innerHTML = students.map(s => `
+            <tr>
+                <td>${escapeHtml(String(s.id))}</td>
+                <td>${escapeHtml(s.firstName || '')}</td>
+                <td>${escapeHtml(s.lastName || '')}</td>
+                <td>
+                    <button class="btn btn-sm btn-primary me-1" onclick="showStudentForm(${s.id})">Editează</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteStudent(${s.id})">Șterge</button>
+                </td>
+            </tr>
+        `).join('');
+    } catch (error) {
+        showAlert('danger', `Eroare la încărcare studenți: ${error.message}`);
+    } finally {
+        showLoading(false);
+    }
+}
+
+/**
+ * Show student form for create or edit. If id is provided, loads student data.
+ */
+async function showStudentForm(id) {
+    try {
+        showLoading(true);
+        // ensure groups cache available for select options
+        await loadGroupsCache();
+
+        let student = { id: null, firstName: '', lastName: '', email: '', groupId: '', subgroupId: '' };
+        if (id) {
+            student = await apiClient.getStudent(id);
+        }
+        const groupOptions = groupsCache.map(g => `<option value="${g.id}" ${g.id === student?.groupId ? 'selected' : ''}>${escapeHtml(g.name)}</option>`).join('');
+
+        const html = `
+            <form id="studentForm">
+                <input type="hidden" id="studentId" value="${student?.id ?? ''}" />
+                <div class="mb-3">
+                    <label class="form-label">Prenume</label>
+                    <input class="form-control" id="studentFirstName" value="${escapeHtml(student?.firstName ?? '')}" required />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Nume</label>
+                    <input class="form-control" id="studentLastName" value="${escapeHtml(student?.lastName ?? '')}" required />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-control" id="studentEmail" value="${escapeHtml(student?.email ?? '')}" required />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Grupă</label>
+                    <select id="studentGroupId" class="form-select" required>
+                        <option value="">Selectează grupă...</option>
+                        ${groupOptions}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">SubgroupId</label>
+                    <input type="number" class="form-control" id="studentSubgroupId" value="${student?.subgroupId ?? ''}" />
+                </div>
+                <div class="text-end">
+                    <button type="submit" class="btn btn-primary">Salvează</button>
+                    <button type="button" class="btn btn-secondary ms-2" data-bs-dismiss="modal">Anulează</button>
+                </div>
+            </form>
+        `;
+
+        showModal(id ? 'Editează Student' : 'Adaugă Student', html);
+
+        // attach submit handler
+        const form = document.getElementById('studentForm');
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await submitStudentForm();
+        });
+
+
+    } catch (err) {
+        showAlert('danger', `Eroare: ${err.message}`);
+    } finally {
+        showLoading(false);
+    }
+}
+
+async function submitStudentForm() {
+    try {
+        showLoading(true);
+        const id = document.getElementById('studentId').value;
+        const payload = {
+            firstName: document.getElementById('studentFirstName').value.trim(),
+            lastName: document.getElementById('studentLastName').value.trim(),
+            email: document.getElementById('studentEmail').value.trim(),
+            groupId: parseInt(document.getElementById('studentGroupId').value, 10),
+            subgroupId: document.getElementById('studentSubgroupId').value ? parseInt(document.getElementById('studentSubgroupId').value, 10) : null
+        };
+
+        if (id) {
+            await apiClient.updateStudent(id, payload);
+            showAlert('success', 'Student actualizat cu succes');
+        } else {
+            await apiClient.createStudent(payload);
+            showAlert('success', 'Student creat cu succes');
+        }
+
+        // close modal
+        const modalEl = document.getElementById('dynamicModal');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        modal.hide();
+
+        await loadStudents();
+    } catch (err) {
+        showAlert('danger', `Eroare la salvare student: ${err.message}`);
+    } finally {
+        showLoading(false);
+    }
+}
+
+async function deleteStudent(id) {
+    if (!confirm('Sigur doriți să ștergeți acest student?')) return;
+    try {
+        showLoading(true);
+        await apiClient.deleteStudent(id);
+        showAlert('success', 'Student șters cu succes');
+        await loadStudents();
+    } catch (err) {
+        showAlert('danger', `Eroare la ștergere: ${err.message}`);
+    } finally {
+        showLoading(false);
+    }
+}
+
+async function loadGroups() {
+    try {
+        showLoading(true);
+        const groups = await apiClient.getGroups();
+        const tableBody = document.getElementById('groupsTableBody');
+        const countEl = document.getElementById('groupCount');
+
+        const count = Array.isArray(groups) ? groups.length : 0;
+        if (countEl) countEl.textContent = count;
+
+        if (!Array.isArray(groups) || groups.length === 0) {
+            tableBody.innerHTML = `
+                <tr><td colspan="3" class="text-center text-muted">Nu sunt grupe în baza de date</td></tr>
+            `;
+            return;
+        }
+
+        tableBody.innerHTML = groups.map(g => `
+            <tr>
+                <td>${escapeHtml(String(g.id))}</td>
+                <td>${escapeHtml(g.name || '')}</td>
+                <td>
+                    <button class="btn btn-sm btn-primary me-1" onclick="showGroupForm(${g.id})">Editează</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteGroup(${g.id})">Șterge</button>
+                </td>
+            </tr>
+        `).join('');
+    } catch (error) {
+        showAlert('danger', `Eroare la încărcare grupe: ${error.message}`);
+    } finally {
+        showLoading(false);
+    }
+}
+
+// Group form/modal handlers
+async function showGroupForm(id) {
+    try {
+        showLoading(true);
+        // ensure education forms are loaded for the select
+        await loadEducationForms();
+        let group = { id: null, name: '', educationFormId: '' };
+        if (id) {
+            group = await apiClient.getGroup(id);
+        }
+        const options = educationFormsCache.map(e => `<option value="${e.id}" ${e.id === group?.educationFormId ? 'selected' : ''}>${escapeHtml(e.name)} (${e.year}/${e.semester})</option>`).join('');
+
+        const html = `
+            <form id="groupForm">
+                <input type="hidden" id="groupId" value="${group?.id ?? ''}" />
+                <div class="mb-3">
+                    <label class="form-label">Nume Grupă</label>
+                    <input class="form-control" id="groupName" value="${escapeHtml(group?.name ?? '')}" required />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Forma Educațională</label>
+                    <select id="groupEducationFormId" class="form-select" required>
+                        <option value="">Selectează Forma Educațională...</option>
+                        ${options}
+                    </select>
+                </div>
+                <div class="text-end">
+                    <button type="submit" class="btn btn-primary">Salvează</button>
+                    <button type="button" class="btn btn-secondary ms-2" data-bs-dismiss="modal">Anulează</button>
+                </div>
+            </form>
+        `;
+
+        showModal(id ? 'Editează Grupă' : 'Adaugă Grupă', html);
+
+        const form = document.getElementById('groupForm');
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await submitGroupForm();
+        });
+    } catch (err) {
+        showAlert('danger', `Eroare: ${err.message}`);
+    } finally {
+        showLoading(false);
+    }
+}
+
+async function submitGroupForm() {
+    try {
+        showLoading(true);
+        const id = document.getElementById('groupId').value;
+        const payload = {
+            name: document.getElementById('groupName').value.trim(),
+            educationFormId: parseInt(document.getElementById('groupEducationFormId').value, 10)
+        };
+
+        if (id) {
+            await apiClient.updateGroup(id, payload);
+            showAlert('success', 'Grupa actualizată cu succes');
+        } else {
+            await apiClient.createGroup(payload);
+            showAlert('success', 'Grupa creată cu succes');
+        }
+
+        const modalEl = document.getElementById('dynamicModal');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        modal.hide();
+
+        await loadGroups();
+    } catch (err) {
+        showAlert('danger', `Eroare la salvare grupă: ${err.message}`);
+    } finally {
+        showLoading(false);
+    }
+}
+
+async function deleteGroup(id) {
+    if (!confirm('Sigur doriți să ștergeți această grupă?')) return;
+    try {
+        showLoading(true);
+        await apiClient.deleteGroup(id);
+        showAlert('success', 'Grupa ștearsă cu succes');
+        await loadGroups();
+    } catch (err) {
+        showAlert('danger', `Eroare la ștergere: ${err.message}`);
+    } finally {
+        showLoading(false);
+    }
+}
+
+async function loadTeachers() {
+    try {
+        showLoading(true);
+        const teachers = await apiClient.getTeachers();
+        const tableBody = document.getElementById('teachersTableBody');
+        const countEl = document.getElementById('teacherCount');
+
+        const count = Array.isArray(teachers) ? teachers.length : 0;
+        if (countEl) countEl.textContent = count;
+
+        if (!Array.isArray(teachers) || teachers.length === 0) {
+            tableBody.innerHTML = `
+                <tr><td colspan="3" class="text-center text-muted">Nu sunt profesori în baza de date</td></tr>
+            `;
+            return;
+        }
+
+        tableBody.innerHTML = teachers.map(t => `
+            <tr>
+                <td>${escapeHtml(String(t.id))}</td>
+                <td>${escapeHtml((t.firstName || '') + ' ' + (t.lastName || ''))}</td>
+                <td>
+                    <button class="btn btn-sm btn-primary me-1" onclick="showTeacherForm(${t.id})">Editează</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteTeacher(${t.id})">Șterge</button>
+                </td>
+            </tr>
+        `).join('');
+    } catch (error) {
+        showAlert('danger', `Eroare la încărcare profesori: ${error.message}`);
+    } finally {
+        showLoading(false);
+    }
+}
+
+// Teacher form/modal handlers
+async function showTeacherForm(id) {
+    try {
+        showLoading(true);
+        let teacher = { id: null, firstName: '', lastName: '', email: '' };
+        if (id) {
+            teacher = await apiClient.getTeacher(id);
+        }
+
+        const html = `
+            <form id="teacherForm">
+                <input type="hidden" id="teacherId" value="${teacher?.id ?? ''}" />
+                <div class="mb-3">
+                    <label class="form-label">Prenume</label>
+                    <input class="form-control" id="teacherFirstName" value="${escapeHtml(teacher?.firstName ?? '')}" required />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Nume</label>
+                    <input class="form-control" id="teacherLastName" value="${escapeHtml(teacher?.lastName ?? '')}" required />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-control" id="teacherEmail" value="${escapeHtml(teacher?.email ?? '')}" required />
+                </div>
+                <div class="text-end">
+                    <button type="submit" class="btn btn-primary">Salvează</button>
+                    <button type="button" class="btn btn-secondary ms-2" data-bs-dismiss="modal">Anulează</button>
+                </div>
+            </form>
+        `;
+
+        showModal(id ? 'Editează Profesor' : 'Adaugă Profesor', html);
+
+        const form = document.getElementById('teacherForm');
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await submitTeacherForm();
+        });
+    } catch (err) {
+        showAlert('danger', `Eroare: ${err.message}`);
+    } finally {
+        showLoading(false);
+    }
+}
+
+async function submitTeacherForm() {
+    try {
+        showLoading(true);
+        const id = document.getElementById('teacherId').value;
+        const payload = {
+            firstName: document.getElementById('teacherFirstName').value.trim(),
+            lastName: document.getElementById('teacherLastName').value.trim(),
+            email: document.getElementById('teacherEmail').value.trim()
+        };
+
+        if (id) {
+            await apiClient.updateTeacher(id, payload);
+            showAlert('success', 'Profesor actualizat cu succes');
+        } else {
+            await apiClient.createTeacher(payload);
+            showAlert('success', 'Profesor creat cu succes');
+        }
+
+        const modalEl = document.getElementById('dynamicModal');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        modal.hide();
+
+        await loadTeachers();
+    } catch (err) {
+        showAlert('danger', `Eroare la salvare profesor: ${err.message}`);
+    } finally {
+        showLoading(false);
+    }
+}
+
+async function deleteTeacher(id) {
+    if (!confirm('Sigur doriți să ștergeți acest profesor?')) return;
+    try {
+        showLoading(true);
+        await apiClient.deleteTeacher(id);
+        showAlert('success', 'Profesor șters cu succes');
+        await loadTeachers();
+    } catch (err) {
+        showAlert('danger', `Eroare la ștergere: ${err.message}`);
     } finally {
         showLoading(false);
     }
@@ -289,6 +804,91 @@ document.addEventListener('DOMContentLoaded', function() {
 
             } catch (error) {
                 showAlert('danger', `Eroare la adăugare sală: ${error.message}`);
+            } finally {
+                showLoading(false);
+            }
+        });
+    }
+    // Add Student Form
+    const addStudentForm = document.getElementById('addStudentForm');
+    if (addStudentForm) {
+        addStudentForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                showLoading(true);
+                const groupHidden = document.getElementById('studentAddGroupId');
+                const groupSearch = document.getElementById('studentAddGroupSearch');
+                let groupId = groupHidden && groupHidden.value ? parseInt(groupHidden.value, 10) : null;
+
+                // fallback: if user typed but didn't select, try to find a matching group by substring
+                if (!groupId && groupSearch && groupSearch.value) {
+                    const q = groupSearch.value.trim().toLowerCase();
+                    const found = groupsCache.find(g => (g.name || '').toLowerCase().includes(q));
+                    if (found) groupId = found.id;
+                }
+
+                const payload = {
+                    firstName: document.getElementById('studentAddFirstName').value.trim(),
+                    lastName: document.getElementById('studentAddLastName').value.trim(),
+                    email: document.getElementById('studentAddEmail').value.trim(),
+                    groupId: groupId
+                };
+
+                await apiClient.createStudent(payload);
+                showAlert('success', 'Studentul a fost adăugat cu succes!');
+                addStudentForm.reset();
+                await loadStudents();
+            } catch (error) {
+                showAlert('danger', `Eroare la adăugare student: ${error.message}`);
+            } finally {
+                showLoading(false);
+            }
+        });
+    }
+
+    // Add Group Form
+    const addGroupForm = document.getElementById('addGroupForm');
+    if (addGroupForm) {
+        addGroupForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                showLoading(true);
+                const payload = {
+                    name: document.getElementById('groupAddName').value.trim(),
+                    educationFormId: parseInt(document.getElementById('groupAddEducationFormId').value, 10)
+                };
+
+                await apiClient.createGroup(payload);
+                showAlert('success', 'Grupa a fost adăugată cu succes!');
+                addGroupForm.reset();
+                await loadGroups();
+            } catch (error) {
+                showAlert('danger', `Eroare la adăugare grupă: ${error.message}`);
+            } finally {
+                showLoading(false);
+            }
+        });
+    }
+
+    // Add Teacher Form
+    const addTeacherForm = document.getElementById('addTeacherForm');
+    if (addTeacherForm) {
+        addTeacherForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                showLoading(true);
+                const payload = {
+                    firstName: document.getElementById('teacherAddFirstName').value.trim(),
+                    lastName: document.getElementById('teacherAddLastName').value.trim(),
+                    email: document.getElementById('teacherAddEmail').value.trim()
+                };
+
+                await apiClient.createTeacher(payload);
+                showAlert('success', 'Profesorul a fost adăugat cu succes!');
+                addTeacherForm.reset();
+                await loadTeachers();
+            } catch (error) {
+                showAlert('danger', `Eroare la adăugare profesor: ${error.message}`);
             } finally {
                 showLoading(false);
             }
@@ -569,7 +1169,11 @@ function getDayName(dayOfWeek) {
  * Escape HTML to prevent XSS
  */
 function escapeHtml(text) {
-    if (!text) return '';
+    if (text === null || text === undefined) return '';
+
+    // Ensure text is converted to a string (handles numbers, booleans, etc.)
+    const str = String(text);
+
     const map = {
         '&': '&amp;',
         '<': '&lt;',
@@ -577,9 +1181,8 @@ function escapeHtml(text) {
         '"': '&quot;',
         "'": '&#039;'
     };
-    return text.replace(/[&<>"']/g, m => map[m]);
+    return str.replace(/[&<>"']/g, m => map[m]);
 }
-
 /**
  * Show modal dialog
  */
@@ -594,11 +1197,6 @@ function showModal(title, content) {
                     </div>
                     <div class="modal-body">
                         ${content}
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                            Închide
-                        </button>
                     </div>
                 </div>
             </div>
@@ -623,3 +1221,29 @@ function showModal(title, content) {
 document.addEventListener('DOMContentLoaded', function() {
     loadDashboardData();
 });
+
+// Load caches and setup comboboxes after DOM ready
+document.addEventListener('DOMContentLoaded', function() {
+    // populate education forms and groups cache for selects and combobox
+    loadEducationForms();
+    loadGroupsCache().then(() => {
+        setupStudentGroupCombobox();
+    });
+});
+
+// Expose functions to global scope so inline onclick handlers and HTML attributes can call them
+// (Some environments or bundlers may wrap files and prevent implicit globals.)
+window.showPage = showPage;
+window.loadStudents = loadStudents;
+window.loadGroups = loadGroups;
+window.loadTeachers = loadTeachers;
+window.loadRooms = loadRooms;
+window.loadSchedules = typeof loadSchedules === 'function' ? loadSchedules : undefined;
+window.showStudentForm = showStudentForm;
+window.deleteStudent = deleteStudent;
+window.showGroupForm = showGroupForm;
+window.submitGroupForm = submitGroupForm;
+window.deleteGroup = deleteGroup;
+window.showTeacherForm = showTeacherForm;
+window.submitTeacherForm = submitTeacherForm;
+window.deleteTeacher = deleteTeacher;
