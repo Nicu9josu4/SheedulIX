@@ -31,7 +31,7 @@ volumes:
 
 # To start: docker compose -f postgres-compose.yml up -d
 # To Stop: .
-docker compose -f postgres-compose.yml down
+# docker compose -f postgres-compose.yml down
 # Everything else regarding your credentials, .NET Web API connection string (localhost:5432), and pgAdmin access (http://localhost:5050) remains identical
 
 # Access Web IDE (pgAdmin):
