@@ -98,22 +98,13 @@ CREATE TABLE "EducationForms" (
     "Name" VARCHAR(100) NOT NULL
 );
 
--- 9. Series
-CREATE TABLE "Series" (
-    "Id" INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    "Name" VARCHAR(100) NOT NULL
-);
-
 -- 10. AcademicGroups
 CREATE TABLE "AcademicGroups" (
     "Id" INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     "Name" VARCHAR(100) NOT NULL,
     "EducationFormId" INT NOT NULL,
-    "SeriesId" INT NULL,
     CONSTRAINT "FK_AcademicGroups_EducationForms_EducationFormId" 
-        FOREIGN KEY ("EducationFormId") REFERENCES "EducationForms"("Id") ON DELETE RESTRICT,
-    CONSTRAINT "FK_AcademicGroups_Series_SeriesId" 
-        FOREIGN KEY ("SeriesId") REFERENCES "Series"("Id") ON DELETE SET NULL
+        FOREIGN KEY ("EducationFormId") REFERENCES "EducationForms"("Id") ON DELETE RESTRICT
 );
 
 -- 11. Subgroups
@@ -175,12 +166,14 @@ CREATE TABLE "Schedules" (
 -- ==========================================
 
 -- 1. TimeSlots
-INSERT INTO "TimeSlots" ("SlotNumber", "StartTime", "EndTime", "IsLunchBreak") VALUES
-(1, '08:00:00', '09:30:00', FALSE),
-(2, '09:45:00', '11:15:00', FALSE),
-(3, '11:30:00', '13:00:00', FALSE),
-(4, '13:00:00', '14:30:00', TRUE),
-(5, '14:30:00', '16:00:00', FALSE);
+INSERT INTO "TimeSlots" ("SlotNumber", "StartTime", "EndTime") VALUES
+(1, '08:00:00', '09:30:00'),
+(2, '09:45:00', '11:15:00'),
+(3, '11:30:00', '13:00:00'),
+(4, '13:30:00', '15:00:00'),
+(5, '15:15:00', '16:45:00'),
+(6, '17:00:00', '18:30:00'),
+(7, '18:45:00', '20:15:00');
 
 -- 2. RoomTypes
 INSERT INTO "RoomTypes" ("Name", "HasComputers") VALUES
@@ -222,16 +215,11 @@ INSERT INTO "EducationForms" ("Name") VALUES
 ('Zi'),
 ('Fără Frecvență');
 
--- 9. Series
-INSERT INTO "Series" ("Name") VALUES
-('Seria A - Anul 2'),
-('Seria B - Anul 2');
-
 -- 10. AcademicGroups
-INSERT INTO "AcademicGroups" ("Name", "EducationFormId", "SeriesId") VALUES
-('CR-211', 1, 1),
-('CR-212', 1, 1),
-('CR-221FR', 2, 2);
+INSERT INTO "AcademicGroups" ("Name", "EducationFormId") VALUES
+('CR-211', 1),
+('CR-212', 1),
+('CR-221FR', 2);
 
 -- 11. Subgroups
 INSERT INTO "Subgroups" ("Name", "GroupId", "StudentCount") VALUES
