@@ -1,6 +1,0 @@
-@SchedulIX_HostAddress = http://localhost:5283
-
-GET {{SchedulIX_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###

@@ -1,0 +1,636 @@
+﻿<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Academic Management System - APL</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/js/app.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        [x-cloak] {
+            display: none !important;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 font-sans text-slate-800" x-data="academicApp">
+
+    <div class="flex h-screen overflow-hidden">
+
+        <!-- Sidebar Navigation -->
+        <aside class="w-64 bg-slate-900 text-slate-300 flex flex-col shrink-0">
+            <div class="p-4 text-white text-lg font-bold border-b border-slate-800 flex items-center space-x-2">
+                <i class="fa-solid fa-graduation-cap text-indigo-400 text-xl"></i>
+                <span>Academic APL</span>
+            </div>
+            <nav class="flex-1 overflow-y-auto py-4 space-y-1 px-3">
+                <button @click="currentTab = 'dashboard'" :class="currentTab === 'dashboard' ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800 hover:text-white'" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">
+                    <i class="fa-solid fa-chart-line w-5"></i><span>Dashboard</span>
+                </button>
+                <button @click="currentTab = 'departments'" :class="currentTab === 'departments' ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800 hover:text-white'" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">
+                    <i class="fa-solid fa-building w-5"></i><span>Departamente</span>
+                </button>
+                <button @click="currentTab = 'studyPrograms'" :class="currentTab === 'studyPrograms' ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800 hover:text-white'" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">
+                    <i class="fa-solid fa-graduation-cap w-5"></i><span>Programe de Studii</span>
+                </button>
+                <button @click="currentTab = 'professors'" :class="currentTab === 'professors' ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800 hover:text-white'" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">
+                    <i class="fa-solid fa-user-tie w-5"></i><span>Angajați / Profesori</span>
+                </button>
+                <button @click="currentTab = 'subjects'" :class="currentTab === 'subjects' ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800 hover:text-white'" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">
+                    <i class="fa-solid fa-book-bookmark w-5"></i><span>Discipline</span>
+                </button>
+                <button @click="currentTab = 'curriculum'" :class="currentTab === 'curriculum' ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800 hover:text-white'" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">
+                    <i class="fa-solid fa-book w-5"></i><span>Curriculum</span>
+                </button>
+                <button @click="currentTab = 'groups'" :class="currentTab === 'groups' ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800 hover:text-white'" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">
+                    <i class="fa-solid fa-users-rectangle w-5"></i><span>Grupe & Subgrupe</span>
+                </button>
+                <button @click="currentTab = 'assignments'" :class="currentTab === 'assignments' ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800 hover:text-white'" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">
+                    <i class="fa-solid fa-book-open-reader w-5"></i><span>Sarcină Didactică</span>
+                </button>
+            </nav>
+        </aside>
+
+        <!-- Content Area -->
+        <div class="flex-1 flex flex-col overflow-y-auto">
+            <header class="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-6 shrink-0">
+                <h1 class="text-xl font-bold text-slate-800" x-text="tabTitles[currentTab]"></h1>
+            </header>
+
+            <main class="p-6 flex-1">
+
+                <!-- DASHBOARD VIEW -->
+                <div x-show="currentTab === 'dashboard'" x-cloak class="grid grid-cols-1 md:grid-cols-4 gap-5">
+                    <div class="bg-white p-5 rounded-xl border shadow-sm">
+                        <div class="text-sm font-medium text-slate-500">Total Angajați</div>
+                        <div class="text-3xl font-bold text-slate-800 mt-2" x-text="stats.totalEmployees || 0"></div>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl border shadow-sm">
+                        <div class="text-sm font-medium text-slate-500">Titulari / Cumul Intern / Extern</div>
+                        <div class="text-lg font-bold text-indigo-600 mt-2">
+                            <span x-text="stats.titulariCount || 0"></span> /
+                            <span x-text="stats.cumulInternCount || 0"></span> /
+                            <span x-text="stats.cumulExternCount || 0"></span>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl border shadow-sm">
+                        <div class="text-sm font-medium text-slate-500">Grupe / Subgrupe</div>
+                        <div class="text-3xl font-bold text-slate-800 mt-2">
+                            <span x-text="stats.totalGroups || 0"></span> / <span x-text="stats.totalSubgroups || 0"></span>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl border shadow-sm">
+                        <div class="text-sm font-medium text-slate-500">Total Ore Repartizate</div>
+                        <div class="text-3xl font-bold text-emerald-600 mt-2" x-text="(stats.totalAssignedHours || 0) + ' h'"></div>
+                    </div>
+                </div>
+
+                <!-- PROGRAME DE STUDII VIEW -->
+                <div x-show="currentTab === 'studyPrograms'" x-cloak class="space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="bg-white p-5 rounded-xl border shadow-sm space-y-4 h-fit">
+                            <h3 class="font-bold text-slate-700 border-b pb-2" x-text="isEditingStudyProgram ? 'Editare Program' : 'Adaugă Program de Studii'"></h3>
+                            <form @submit.prevent="submitStudyProgram" class="space-y-3">
+                                <div>
+                                    <span class="block text-xs font-semibold text-slate-600 mb-1">Cod Program (ex: CR, INF)</span>
+                                    <input type="text" x-model="studyProgramForm.code" required class="w-full px-3 py-2 border rounded text-sm">
+                                </div>
+                                <div>
+                                    <span class="block text-xs font-semibold text-slate-600 mb-1">Nume Program</span>
+                                    <input type="text" x-model="studyProgramForm.name" required class="w-full px-3 py-2 border rounded text-sm">
+                                </div>
+                                <div>
+                                    <span class="block text-xs font-semibold text-slate-600 mb-1">Nivel Licență / Master</span>
+                                    <select x-model="studyProgramForm.degreeLevel" class="w-full px-3 py-2 border rounded text-sm bg-white">
+                                        <option value="Licență">Licență</option>
+                                        <option value="Master">Master</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <span class="block text-xs font-semibold text-slate-600 mb-1">Durată (Ani)</span>
+                                    <input type="number" x-model="studyProgramForm.durationYears" min="1" max="6" required class="w-full px-3 py-2 border rounded text-sm">
+                                </div>
+                                <div class="flex gap-2">
+                                    <button type="submit" class="flex-1 bg-indigo-600 text-white py-2 rounded text-sm font-medium hover:bg-indigo-700" x-text="isEditingStudyProgram ? 'Actualizează' : 'Adaugă Program'"></button>
+                                    <template x-if="isEditingStudyProgram">
+                                        <button type="button" @click="cancelStudyProgramEdit()" class="bg-slate-200 text-slate-700 px-3 py-2 rounded text-sm">Renunță</button>
+                                    </template>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="lg:col-span-2 bg-white rounded-xl border shadow-sm overflow-hidden">
+                            <table class="w-full text-left border-collapse">
+                                <thead class="bg-slate-50 border-b text-xs text-slate-500 uppercase">
+                                    <tr>
+                                        <th class="p-3">Cod</th>
+                                        <th class="p-3">Nume Program</th>
+                                        <th class="p-3">Nivel</th>
+                                        <th class="p-3">Durată</th>
+                                        <th class="p-3 text-right">Acțiuni</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y text-sm">
+                                    <template x-for="sp in studyPrograms" :key="sp.id">
+                                        <tr class="hover:bg-slate-50">
+                                            <td class="p-3 font-semibold" x-text="sp.code"></td>
+                                            <td class="p-3" x-text="sp.name"></td>
+                                            <td class="p-3" x-text="sp.degreeLevel"></td>
+                                            <td class="p-3" x-text="sp.durationYears + ' Ani'"></td>
+                                            <td class="p-3 text-right">
+                                                <button @click="editStudyProgram(sp)" class="text-indigo-600 hover:text-indigo-800 text-xs font-semibold">
+                                                    <i class="fa-solid fa-pen-to-square mr-1"></i>Editează
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DEPARTAMENTE VIEW -->
+                <div x-show="currentTab === 'departments'" x-cloak class="space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="bg-white p-5 rounded-xl border shadow-sm space-y-4 h-fit">
+                            <h3 class="font-bold text-slate-700 border-b pb-2" x-text="isEditingDepartment ? 'Editare Departament' : 'Adaugă Departament'"></h3>
+                            <form @submit.prevent="submitDepartment" class="space-y-3">
+                                <div>
+                                    <span class="block text-xs font-semibold text-slate-600 mb-1">Cod Departament</span>
+                                    <input type="text" x-model="departmentForm.code" required class="w-full px-3 py-2 border rounded text-sm">
+                                </div>
+                                <div>
+                                    <span class="block text-xs font-semibold text-slate-600 mb-1">Nume Departament</span>
+                                    <input type="text" x-model="departmentForm.name" required class="w-full px-3 py-2 border rounded text-sm">
+                                </div>
+                                <div>
+                                    <span class="block text-xs font-semibold text-slate-600 mb-1">Descriere</span>
+                                    <textarea x-model="departmentForm.description" class="w-full px-3 py-2 border rounded text-sm"></textarea>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button type="submit" class="flex-1 bg-indigo-600 text-white py-2 rounded text-sm font-medium hover:bg-indigo-700" x-text="isEditingDepartment ? 'Actualizează' : 'Adaugă'"></button>
+                                    <template x-if="isEditingDepartment">
+                                        <button type="button" @click="cancelDepartmentEdit()" class="bg-slate-200 text-slate-700 px-3 py-2 rounded text-sm">Renunță</button>
+                                    </template>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="lg:col-span-2 bg-white rounded-xl border shadow-sm overflow-hidden">
+                            <table class="w-full text-left border-collapse">
+                                <thead class="bg-slate-50 border-b text-xs text-slate-500 uppercase">
+                                    <tr>
+                                        <th class="p-3">Cod</th>
+                                        <th class="p-3">Nume</th>
+                                        <th class="p-3">Descriere</th>
+                                        <th class="p-3 text-right">Acțiuni</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y text-sm">
+                                    <template x-for="d in departments" :key="d.id">
+                                        <tr class="hover:bg-slate-50">
+                                            <td class="p-3 font-semibold" x-text="d.code"></td>
+                                            <td class="p-3" x-text="d.name"></td>
+                                            <td class="p-3 text-xs text-slate-500" x-text="d.description || '-'"></td>
+                                            <td class="p-3 text-right">
+                                                <button @click="editDepartment(d)" class="text-indigo-600 hover:text-indigo-800 text-xs font-semibold">
+                                                    <i class="fa-solid fa-pen-to-square mr-1"></i>Editează
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PROFESORI VIEW CU TABEL DE EDITARE -->
+                <div x-show="currentTab === 'professors'" x-cloak class="space-y-6">
+                    <div class="bg-white p-5 rounded-xl border shadow-sm space-y-4">
+                        <div class="flex justify-between items-center border-b pb-3">
+                            <h3 class="font-bold text-slate-700 text-lg" x-text="isEditingPerson ? 'Editare Profesor' : 'Adăugare Angajat Nou'"></h3>
+                            <a href="/search.html" class="text-sm text-indigo-600 hover:underline flex items-center">
+                                <i class="fa-solid fa-magnifying-glass mr-1"></i> Căutare Persoană Existentă (Cumul)
+                            </a>
+                        </div>
+                        <form @submit.prevent="submitPersonOrEmployment" class="grid grid-cols-2 gap-4">
+                            <div>
+                                <span class="block text-xs font-semibold text-slate-600 mb-1">Nume</span>
+                                <input type="text" x-model="personForm.lastName" required class="w-full px-3 py-2 border rounded text-sm">
+                            </div>
+                            <div>
+                                <span class="block text-xs font-semibold text-slate-600 mb-1">Prenume</span>
+                                <input type="text" x-model="personForm.firstName" required class="w-full px-3 py-2 border rounded text-sm">
+                            </div>
+                            <div>
+                                <span class="block text-xs font-semibold text-slate-600 mb-1">Email Instituțional</span>
+                                <input type="email" x-model="personForm.email" required class="w-full px-3 py-2 border rounded text-sm">
+                            </div>
+                            <div>
+                                <span class="block text-xs font-semibold text-slate-600 mb-1">Titlu Academic</span>
+                                <input type="text" x-model="personForm.academicTitle" class="w-full px-3 py-2 border rounded text-sm">
+                            </div>
+                            <div class="col-span-2">
+                                <span class="block text-xs font-semibold text-slate-600 mb-1">Departament</span>
+                                <select x-model="personForm.departmentId" required class="w-full px-3 py-2 border rounded text-sm bg-white">
+                                    <option value="">-- Selectează Departament --</option>
+                                    <template x-for="d in departments" :key="d.id">
+                                        <option :value="d.id" x-text="d.name"></option>
+                                    </template>
+                                </select>
+                            </div>
+                            <div class="flex gap-2 col-span-2">
+                                <button type="submit" class="flex-1 bg-indigo-600 text-white py-2 rounded text-sm font-medium hover:bg-indigo-700" x-text="isEditingPerson ? 'Actualizează Profesor' : 'Salvează Angajarea'"></button>
+                                <template x-if="isEditingPerson">
+                                    <button type="button" @click="cancelPersonEdit()" class="bg-slate-200 text-slate-700 px-4 py-2 rounded text-sm">Renunță</button>
+                                </template>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Tabel Profesori Existenti -->
+                    <div class="bg-white rounded-xl border shadow-sm overflow-hidden">
+                        <table class="w-full text-left border-collapse">
+                            <thead class="bg-slate-50 border-b text-xs text-slate-500 uppercase">
+                                <tr>
+                                    <th class="p-3">Nume complet</th>
+                                    <th class="p-3">Email</th>
+                                    <th class="p-3">Titlu</th>
+                                    <th class="p-3">Limbi</th>
+                                    <th class="p-3 text-right">Acțiuni</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y text-sm">
+                                <template x-for="p in professors" :key="p.id">
+                                    <tr class="hover:bg-slate-50">
+                                        <td class="p-3 font-semibold text-slate-800" x-text="p.fullName"></td>
+                                        <td class="p-3 text-xs text-slate-500" x-text="p.email"></td>
+                                        <td class="p-3" x-text="p.academicTitle || '-'"></td>
+                                        <td class="p-3">
+                                            <template x-for="l in (p.languages || [])" :key="l">
+                                                <span class="bg-slate-100 text-slate-600 text-xs px-2 py-0.5 rounded mr-1 border" x-text="l"></span>
+                                            </template>
+                                        </td>
+                                        <td class="p-3 text-right">
+                                            <button @click="editPerson(p)" class="text-indigo-600 hover:text-indigo-800 text-xs font-semibold">
+                                                <i class="fa-solid fa-pen-to-square mr-1"></i>Editează
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- DISCIPLINE VIEW CU FORMULAR SPAN-URI & TABEL EDITARE -->
+                <div x-show="currentTab === 'subjects'" x-cloak class="space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="bg-white p-5 rounded-xl border shadow-sm space-y-4 h-fit">
+                            <h3 class="font-bold text-slate-700 border-b pb-2" x-text="isEditingSubject ? 'Editare Disciplină' : 'Adăugare Disciplină'"></h3>
+                            <form @submit.prevent="submitSubject" class="space-y-3">
+                                <div>
+                                    <span class="block text-xs font-semibold text-slate-600 mb-1">Cod Disciplină</span>
+                                    <input type="text" x-model="subjectForm.code" required class="w-full px-3 py-2 border rounded text-sm">
+                                </div>
+                                <div>
+                                    <span class="block text-xs font-semibold text-slate-600 mb-1">Nume Disciplină</span>
+                                    <input type="text" x-model="subjectForm.name" required class="w-full px-3 py-2 border rounded text-sm">
+                                </div>
+                                <div>
+                                    <span class="block text-xs font-semibold text-slate-600 mb-1">Număr Credite</span>
+                                    <input type="number" x-model="subjectForm.credits" min="1" required class="w-full px-3 py-2 border rounded text-sm">
+                                </div>
+                                <div>
+                                    <span class="block text-xs font-semibold text-slate-600 mb-1">Total Ore</span>
+                                    <input type="number" x-model="subjectForm.totalHours" min="1" required class="w-full px-3 py-2 border rounded text-sm">
+                                </div>
+                                <div>
+                                    <span class="block text-xs font-semibold text-slate-600 mb-1">Descriere</span>
+                                    <textarea x-model="subjectForm.description" class="w-full px-3 py-2 border rounded text-sm"></textarea>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button type="submit" class="flex-1 bg-indigo-600 text-white py-2 rounded text-sm font-medium hover:bg-indigo-700" x-text="isEditingSubject ? 'Actualizează' : 'Salvează Disciplina'"></button>
+                                    <template x-if="isEditingSubject">
+                                        <button type="button" @click="cancelSubjectEdit()" class="bg-slate-200 text-slate-700 px-3 py-2 rounded text-sm">Renunță</button>
+                                    </template>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="lg:col-span-2 bg-white rounded-xl border shadow-sm overflow-hidden">
+                            <table class="w-full text-left border-collapse">
+                                <thead class="bg-slate-50 border-b text-xs text-slate-500 uppercase">
+                                    <tr>
+                                        <th class="p-3">Cod</th>
+                                        <th class="p-3">Nume Disciplină</th>
+                                        <th class="p-3">Credite</th>
+                                        <th class="p-3">Total Ore</th>
+                                        <th class="p-3 text-right">Acțiuni</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y text-sm">
+                                    <template x-for="s in subjects" :key="s.id">
+                                        <tr class="hover:bg-slate-50">
+                                            <td class="p-3 font-semibold" x-text="s.code"></td>
+                                            <td class="p-3" x-text="s.name"></td>
+                                            <td class="p-3" x-text="s.credits"></td>
+                                            <td class="p-3" x-text="s.totalHours + ' h'"></td>
+                                            <td class="p-3 text-right">
+                                                <button @click="editSubject(s)" class="text-indigo-600 hover:text-indigo-800 text-xs font-semibold">
+                                                    <i class="fa-solid fa-pen-to-square mr-1"></i>Editează
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CURRICULUM VIEW CU TAB-URI DE GRUPĂ/AN ȘI ASOCIERE DISCIPLINE -->
+                <div x-show="currentTab === 'curriculum'" x-cloak class="space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Creare/Editare Versiune Curriculum -->
+                        <div class="bg-white p-5 rounded-xl border shadow-sm space-y-4">
+                            <h3 class="font-bold text-slate-700 border-b pb-2" x-text="isEditingCurriculum ? 'Editare Versiune Curriculum' : 'Adăugare Versiune Curriculum'"></h3>
+                            <form @submit.prevent="submitCurriculum" class="space-y-3">
+                                <div>
+                                    <span class="block text-xs font-semibold text-slate-600 mb-1">Program de Studii</span>
+                                    <select x-model="curriculumForm.studyProgramId" required class="w-full px-3 py-2 border rounded text-sm bg-white">
+                                        <option value="">-- Selectează Programul --</option>
+                                        <template x-for="sp in studyPrograms" :key="sp.id">
+                                            <option :value="sp.id" x-text="sp.name + ' (' + sp.code + ')'"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                                <div>
+                                    <span class="block text-xs font-semibold text-slate-600 mb-1">An Academic / Versiune</span>
+                                    <input type="text" x-model="curriculumForm.version" placeholder="ex: 2026-2027" required class="w-full px-3 py-2 border rounded text-sm">
+                                </div>
+                                <div class="flex gap-2">
+                                    <button type="submit" class="flex-1 bg-indigo-600 text-white py-2 rounded text-sm font-medium hover:bg-indigo-700" x-text="isEditingCurriculum ? 'Actualizează' : 'Salvează Versiunea'"></button>
+                                    <template x-if="isEditingCurriculum">
+                                        <button type="button" @click="cancelCurriculumEdit()" class="bg-slate-200 text-slate-700 px-3 py-2 rounded text-sm">Renunță</button>
+                                    </template>
+                                </div>
+                            </form>
+
+                            <!-- Adăugare Disciplină în Curriculum -->
+                            <div class="border-t pt-4 space-y-3">
+                                <h4 class="font-semibold text-sm text-slate-700">Asociere Disciplină în Curriculum</h4>
+                                <form @submit.prevent="submitCurriculumSubject" class="space-y-3">
+                                    <div>
+                                        <span class="block text-xs font-semibold text-slate-600 mb-1">Selectează Curriculum</span>
+                                        <select x-model="curriculumSubjectForm.curriculumId" required class="w-full px-3 py-2 border rounded text-sm bg-white">
+                                            <option value="">-- Curriculum --</option>
+                                            <template x-for="c in curriculums" :key="c.id">
+                                                <option :value="c.id" x-text="'Versiunea ' + c.version"></option>
+                                            </template>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <span class="block text-xs font-semibold text-slate-600 mb-1">Selectează Disciplina</span>
+                                        <select x-model="curriculumSubjectForm.subjectId" required class="w-full px-3 py-2 border rounded text-sm bg-white">
+                                            <option value="">-- Disciplină --</option>
+                                            <template x-for="s in subjects" :key="s.id">
+                                                <option :value="s.id" x-text="s.name + ' (' + s.code + ')'"></option>
+                                            </template>
+                                        </select>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <span class="block text-xs font-semibold text-slate-600 mb-1">Limba</span>
+                                            <select x-model="curriculumSubjectForm.languageId" required class="w-full px-2 py-1.5 border rounded text-sm bg-white">
+                                                <option value="">Limbă</option>
+                                                <template x-for="l in languages" :key="l.id">
+                                                    <option :value="l.id" x-text="l.name"></option>
+                                                </template>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <span class="block text-xs font-semibold text-slate-600 mb-1">An Studiu</span>
+                                            <input type="number" min="1" x-model="curriculumSubjectForm.yearOfStudy" required class="w-full px-2 py-1.5 border rounded text-sm">
+                                        </div>
+                                    </div>
+                                    <div class="grid grid-cols-3 gap-2">
+                                        <input type="number" placeholder="Ore Curs" x-model="curriculumSubjectForm.lectureHours" class="px-2 py-1 border rounded text-xs">
+                                        <input type="number" placeholder="Ore Sem" x-model="curriculumSubjectForm.seminarHours" class="px-2 py-1 border rounded text-xs">
+                                        <input type="number" placeholder="Ore Lab" x-model="curriculumSubjectForm.labHours" class="px-2 py-1 border rounded text-xs">
+                                    </div>
+                                    <button type="submit" class="w-full bg-emerald-600 text-white py-2 rounded text-sm font-medium hover:bg-emerald-700">Adaugă în Curriculum</button>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- TAB-URI PENTRU FIECARE CURRICULUM (GRUPATE PER GRUPĂ/AN) -->
+                        <div class="lg:col-span-2 bg-white rounded-xl border shadow-sm p-4 space-y-4">
+                            <h3 class="font-bold text-slate-700 border-b pb-2">Planuri de Învățământ per Grupă & An</h3>
+
+                            <!-- Bare de Tab-uri dinamic generate -->
+                            <div class="flex border-b overflow-x-auto space-x-2 pb-1">
+                                <template x-for="tab in curriculumTabs" :key="tab.id">
+                                    <button @click="activeCurriculumTabId = tab.id"
+                                            :class="activeCurriculumTabId === tab.id ? 'border-b-2 border-indigo-600 text-indigo-600 font-bold' : 'text-slate-500 hover:text-slate-800'"
+                                            class="px-4 py-2 text-sm whitespace-nowrap transition-colors">
+                                        <span x-text="tab.title"></span>
+                                    </button>
+                                </template>
+                            </div>
+
+                            <!-- Conținutul Tab-ului Selectat -->
+                            <template x-for="tab in curriculumTabs" :key="tab.id">
+                                <div x-show="activeCurriculumTabId === tab.id" class="space-y-3">
+                                    <div class="flex justify-between items-center bg-slate-50 p-3 rounded border">
+                                        <div>
+                                            <span class="font-bold text-slate-800" x-text="tab.studyProgramName"></span>
+                                            <span class="text-xs text-slate-500 block" x-text="'Versiunea Anuală: ' + tab.version"></span>
+                                        </div>
+                                        <button @click="editCurriculum({ id: tab.id, studyProgramId: tab.studyProgramId, version: tab.version, isActive: true })" class="text-indigo-600 text-xs font-semibold">
+                                            <i class="fa-solid fa-pen-to-square mr-1"></i>Editează Curriculum
+                                        </button>
+                                    </div>
+
+                                    <table class="w-full text-left border-collapse">
+                                        <thead class="bg-slate-50 border-b text-xs text-slate-500 uppercase">
+                                            <tr>
+                                                <th class="p-2.5">An / Sem</th>
+                                                <th class="p-2.5">Disciplină</th>
+                                                <th class="p-2.5">Limbă</th>
+                                                <th class="p-2.5">Curs/Sem/Lab</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y text-xs">
+                                            <template x-for="cs in (tab.subjects || [])" :key="cs.id">
+                                                <tr class="hover:bg-slate-50">
+                                                    <td class="p-2.5 font-semibold" x-text="'An ' + cs.yearOfStudy + ' / Sem ' + cs.semester"></td>
+                                                    <td class="p-2.5" x-text="cs.subjectName || 'Disciplină'"></td>
+                                                    <td class="p-2.5" x-text="cs.languageCode || 'RO'"></td>
+                                                    <td class="p-2.5 font-mono" x-text="cs.lectureHours + 'h / ' + cs.seminarHours + 'h / ' + cs.labHours + 'h'"></td>
+                                                </tr>
+                                            </template>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- GRUPE VIEW CU TABEL DE EDITARE -->
+                <div x-show="currentTab === 'groups'" x-cloak class="space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="bg-white p-6 rounded-xl border shadow-sm space-y-4 h-fit">
+                            <h3 class="font-bold text-slate-700 text-lg border-b pb-2" x-text="isEditingGroup ? 'Editare Grupă' : 'Creare Grupă Nouă'"></h3>
+                            <form @submit.prevent="submitGroup" class="space-y-4">
+                                <div>
+                                    <span class="block text-xs font-semibold text-slate-600 mb-1">Cod / Nume Grupă</span>
+                                    <input type="text" x-model="groupForm.code" required class="w-full px-3 py-2 border rounded text-sm">
+                                </div>
+                                <div>
+                                    <span class="block text-xs font-semibold text-slate-600 mb-1">Program de Studii</span>
+                                    <select x-model="groupForm.studyProgramId" required class="w-full px-3 py-2 border rounded text-sm bg-white">
+                                        <option value="">-- Program --</option>
+                                        <template x-for="sp in studyPrograms" :key="sp.id">
+                                            <option :value="sp.id" x-text="sp.name"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                                <div>
+                                    <span class="block text-xs font-semibold text-slate-600 mb-1">Curriculum</span>
+                                    <select x-model="groupForm.curriculumId" required class="w-full px-3 py-2 border rounded text-sm bg-white">
+                                        <option value="">-- Curriculum --</option>
+                                        <template x-for="c in filteredCurriculums" :key="c.id">
+                                            <option :value="c.id" x-text="'Versiunea ' + c.version"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                                <div>
+                                    <span class="block text-xs font-semibold text-slate-600 mb-1">Limba de Instruire</span>
+                                    <select x-model="groupForm.languageId" required class="w-full px-3 py-2 border rounded text-sm bg-white">
+                                        <option value="">-- Limbă --</option>
+                                        <template x-for="lang in languages" :key="lang.id">
+                                            <option :value="lang.id" x-text="lang.name"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <span class="block text-xs font-semibold text-slate-600 mb-1">An Studiu</span>
+                                        <input type="number" x-model.number="groupForm.yearOfStudy" min="1" max="6" required class="w-full px-3 py-2 border rounded text-sm">
+                                    </div>
+                                    <div>
+                                        <span class="block text-xs font-semibold text-slate-600 mb-1">Nr. Studenți</span>
+                                        <input type="number" x-model.number="groupForm.studentCount" min="1" required class="w-full px-3 py-2 border rounded text-sm">
+                                    </div>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button type="submit" class="flex-1 bg-indigo-600 text-white py-2 rounded text-sm font-medium hover:bg-indigo-700" x-text="isEditingGroup ? 'Actualizează' : 'Adaugă Grupa'"></button>
+                                    <template x-if="isEditingGroup">
+                                        <button type="button" @click="cancelGroupEdit()" class="bg-slate-200 text-slate-700 px-3 py-2 rounded text-sm">Renunță</button>
+                                    </template>
+                                </div>
+                            </form>
+                        </div>
+
+                        <div class="lg:col-span-2 bg-white rounded-xl border shadow-sm overflow-hidden">
+                            <table class="w-full text-left border-collapse">
+                                <thead class="bg-slate-50 border-b text-xs text-slate-500 uppercase">
+                                    <tr>
+                                        <th class="p-3">Grupă</th>
+                                        <th class="p-3">An</th>
+                                        <th class="p-3">Studenți</th>
+                                        <th class="p-3">Subgrupe</th>
+                                        <th class="p-3 text-right">Acțiuni</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y text-sm">
+                                    <template x-for="g in groups" :key="g.id">
+                                        <tr class="hover:bg-slate-50">
+                                            <td class="p-3 font-semibold" x-text="g.code"></td>
+                                            <td class="p-3" x-text="'Anul ' + g.yearOfStudy"></td>
+                                            <td class="p-3" x-text="g.studentCount"></td>
+                                            <td class="p-3">
+                                                <span class="px-2 py-0.5 text-xs rounded-full bg-slate-100 font-medium" x-text="(g.subgroups || []).length + ' Subgrupe'"></span>
+                                            </td>
+                                            <td class="p-3 text-right">
+                                                <button @click="editGroup(g)" class="text-indigo-600 hover:text-indigo-800 text-xs font-semibold">
+                                                    <i class="fa-solid fa-pen-to-square mr-1"></i>Editează
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ASSIGNMENTS VIEW -->
+                <div x-show="currentTab === 'assignments'" x-cloak class="space-y-6">
+                    <div class="bg-white p-6 rounded-xl border shadow-sm max-w-xl mx-auto space-y-4">
+                        <h3 class="font-bold text-slate-700 text-lg border-b pb-2">Repartizare Sarcină Didactică</h3>
+                        <form @submit.prevent="submitAssignment" class="space-y-3">
+                            <div>
+                                <span class="block text-xs font-semibold text-slate-600 mb-1">Profesor</span>
+                                <select x-model="assignmentForm.professorProfileId" required class="w-full px-3 py-2 border rounded text-sm bg-white">
+                                    <option value="">-- Selectează Profesor --</option>
+                                    <template x-for="p in professors" :key="p.id">
+                                        <option :value="p.id" x-text="p.fullName"></option>
+                                    </template>
+                                </select>
+                            </div>
+                            <div>
+                                <span class="block text-xs font-semibold text-slate-600 mb-1">Disciplină</span>
+                                <select x-model="assignmentForm.subjectId" required class="w-full px-3 py-2 border rounded text-sm bg-white">
+                                    <option value="">-- Selectează Disciplina --</option>
+                                    <template x-for="s in subjects" :key="s.id">
+                                        <option :value="s.id" x-text="s.name"></option>
+                                    </template>
+                                </select>
+                            </div>
+                            <div>
+                                <span class="block text-xs font-semibold text-slate-600 mb-1">Grupă</span>
+                                <select x-model="assignmentForm.groupId" required class="w-full px-3 py-2 border rounded text-sm bg-white">
+                                    <option value="">-- Selectează Grupa --</option>
+                                    <template x-for="g in groups" :key="g.id">
+                                        <option :value="g.id" x-text="g.code"></option>
+                                    </template>
+                                </select>
+                            </div>
+                            <div>
+                                <span class="block text-xs font-semibold text-slate-600 mb-1">Limbă</span>
+                                <select x-model="assignmentForm.languageId" required class="w-full px-3 py-2 border rounded text-sm bg-white">
+                                    <option value="">-- Selectează Limba --</option>
+                                    <template x-for="l in languages" :key="l.id">
+                                        <option :value="l.id" x-text="l.name"></option>
+                                    </template>
+                                </select>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <span class="block text-xs font-semibold text-slate-600 mb-1">Tip Activitate</span>
+                                    <select x-model="assignmentForm.activityType" class="w-full px-3 py-2 border rounded text-sm bg-white">
+                                        <option value="Lecture">Curs</option>
+                                        <option value="Seminar">Seminar</option>
+                                        <option value="Laboratory">Laborator</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <span class="block text-xs font-semibold text-slate-600 mb-1">Ore</span>
+                                    <input type="number" x-model="assignmentForm.hours" min="1" required class="w-full px-3 py-2 border rounded text-sm">
+                                </div>
+                            </div>
+                            <button type="submit" class="w-full bg-emerald-600 text-white py-2 rounded text-sm font-medium hover:bg-emerald-700 transition">
+                                Validează și Salvează Sarcina
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+    </div>
+</body>
+</html>

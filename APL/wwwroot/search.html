@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Căutare Persoană - APL</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/js/app.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-slate-100 font-sans text-slate-800" x-data="searchApp">
+    <div class="max-w-3xl mx-auto p-6">
+        <h1 class="text-2xl font-bold mb-4">Căutare Persoană pentru Adăugare Angajare (Cumul)</h1>
+
+        <div class="bg-white p-4 rounded shadow-sm mb-4">
+            <input type="text" x-model="searchQuery" @input.debounce.300ms="searchExistingPerson" placeholder="Caută după nume sau email..." class="w-full px-3 py-2 border rounded">
+        </div>
+
+        <template x-if="searchResults.length > 0">
+            <div class="bg-white p-3 rounded shadow-sm mb-4">
+                <template x-for="p in searchResults" :key="p.id">
+                    <div class="p-2 border-b hover:bg-slate-50 cursor-pointer" @click="selectPerson(p)">
+                        <div class="font-semibold" x-text="p.lastName + ' ' + p.firstName"></div>
+                        <div class="text-sm text-slate-500" x-text="p.email"></div>
+                    </div>
+                </template>
+            </div>
+        </template>
+
+        <template x-if="selectedPerson">
+            <div class="bg-white p-4 rounded shadow-sm">
+                <h2 class="font-bold text-lg mb-2">Adaugă angajare pentru: <span class="text-indigo-600" x-text="selectedPerson.lastName + ' ' + selectedPerson.firstName"></span></h2>
+                <form @submit.prevent="submitEmployment" class="grid grid-cols-2 gap-3 mt-3">
+                    <div class="col-span-2">
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Departament</label>
+                        <select x-model="employment.departmentId" required class="w-full px-3 py-2 border rounded">
+                            <option value="">-- alege departament --</option>
+                            <template x-for="d in departments" :key="d.id">
+                                <option :value="d.id" x-text="d.name"></option>
+                            </template>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Tip Angajare</label>
+                        <select x-model="employment.employmentType" class="w-full px-3 py-2 border rounded">
+                            <option value="Titular">Titular</option>
+                            <option value="InternalMultiJob">Cumul Intern</option>
+                            <option value="ExternalMultiJob">Cumul Extern</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Funcție</label>
+                        <input type="text" x-model="employment.position" placeholder="Funcție" required class="w-full px-3 py-2 border rounded">
+                    </div>
+
+                    <div class="col-span-2">
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Norma didactică</label>
+                        <input type="number" step="0.1" x-model="employment.teachingLoad" class="w-full px-3 py-2 border rounded">
+                    </div>
+
+                    <button type="submit" class="col-span-2 bg-indigo-600 text-white py-2 rounded font-medium hover:bg-indigo-700">
+                        Adaugă Angajare
+                    </button>
+                </form>
+            </div>
+        </template>
+
+        <div class="mt-6 text-sm text-slate-600">Înapoi la <a href="/index.html" class="text-indigo-600 underline font-semibold">panoul principal</a></div>
+    </div>
+
+    <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('searchApp', () => ({
+                searchQuery: '',
+                searchResults: [],
+                selectedPerson: null,
+                departments: [],
+                employment: {
+                    departmentId: '',
+                    employmentType: 'Titular',
+                    position: 'Lector',
+                    teachingLoad: 1.0
+                },
+
+                async init() {
+                    await this.loadDepartments();
+                },
+
+                async loadDepartments() {
+                    try { this.departments = await ApiService.getDepartments(); }
+                    catch (e) { console.error(e); }
+                },
+
+                async searchExistingPerson() {
+                    if (this.searchQuery.length < 3) { this.searchResults = []; return; }
+                    this.searchResults = await ApiService.searchPersons(this.searchQuery);
+                },
+
+                selectPerson(p) {
+                    this.selectedPerson = p;
+                    this.searchResults = [];
+                },
+
+                async submitEmployment() {
+                    if (!this.selectedPerson) return alert('Selectați mai întâi o persoană.');
+                    if (!this.employment.departmentId) return alert('Selectați departamentul.');
+
+                    try {
+                        const payload = {
+                            departmentId: this.employment.departmentId,
+                            employmentType: EmploymentTypeMap[this.employment.employmentType] ?? 0,
+                            position: this.employment.position,
+                            teachingLoad: parseFloat(this.employment.teachingLoad)
+                        };
+
+                        await ApiService.addEmploymentForExistingPerson(this.selectedPerson.id, payload);
+                        alert('Angajarea a fost adăugată cu succes.');
+                        this.selectedPerson = null;
+                        this.searchQuery = '';
+                        this.employment = { departmentId: '', employmentType: 'Titular', position: 'Lector', teachingLoad: 1.0 };
+                    } catch (err) {
+                        alert('Eroare: ' + err.message);
+                    }
+                }
+            }));
+        });
+    </script>
+</body>
+</html>
