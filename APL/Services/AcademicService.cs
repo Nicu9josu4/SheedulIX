@@ -23,7 +23,7 @@ public class AcademicService
         var group = await _context.Groups
             .Include(g => g.Subgroups)
             .FirstOrDefaultAsync(g => g.Id == groupId)
-            ?? throw new KeyNotFoundException("Group not found");
+            ?? throw new KeyNotFoundException("Grupa nu a fost găsită.");
 
         _context.Subgroups.RemoveRange(group.Subgroups);
 
@@ -68,10 +68,19 @@ public class AcademicService
         return m.Success ? int.Parse(m.Groups[1].Value) : null;
     }
 
-    /// <summary>
-    /// Validates business rules prior to creating a teaching assignment.
-    /// </summary>
+    /// <summary>Validates business rules and saves the teaching assignment.</summary>
     public async Task AssignProfessorAsync(TeachingAssignment assignment)
+    {
+        await ValidateAssignmentAsync(assignment);
+        _context.TeachingAssignments.Add(assignment);
+        await _context.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Validates business rules prior to creating a teaching assignment (nothing is saved).
+    /// Throws InvalidOperationException with the reason, or KeyNotFoundException for a missing group.
+    /// </summary>
+    public async Task ValidateAssignmentAsync(TeachingAssignment assignment)
     {
         if (assignment.Hours <= 0)
             throw new InvalidOperationException("Numărul de ore trebuie să fie pozitiv.");
@@ -83,7 +92,7 @@ public class AcademicService
         // 1. Rule: Lectures cannot be assigned to subgroups
         if (assignment.ActivityType == ActivityType.Lecture && assignment.SubgroupId.HasValue)
         {
-            throw new InvalidOperationException("Lectures cannot be split into subgroups.");
+            throw new InvalidOperationException("Cursurile nu pot fi împărțite pe subgrupe.");
         }
 
         // 2. Validate Professor Skills (Subject Capability)
@@ -92,7 +101,7 @@ public class AcademicService
 
         if (!canTeachSubject)
         {
-            throw new InvalidOperationException("Professor is not qualified to teach this subject.");
+            throw new InvalidOperationException("Profesorul nu este calificat pentru această disciplină.");
         }
 
         // 3. Validate Language Compatibility
@@ -101,12 +110,12 @@ public class AcademicService
 
         if (!canTeachLanguage)
         {
-            throw new InvalidOperationException("Professor is not authorized to teach in this language.");
+            throw new InvalidOperationException("Profesorul nu este autorizat să predea în această limbă.");
         }
 
         // 4. Validate Curriculum Inclusion
         var group = await _context.Groups.FindAsync(assignment.GroupId)
-            ?? throw new KeyNotFoundException("Group not found");
+            ?? throw new KeyNotFoundException("Grupa nu a fost găsită.");
 
         bool subjectInCurriculum = await _context.CurriculumSubjects
             .AnyAsync(cs => cs.CurriculumId == group.CurriculumId
@@ -115,13 +124,10 @@ public class AcademicService
 
         if (!subjectInCurriculum)
         {
-            throw new InvalidOperationException("Subject/Language combination is not present in group's curriculum.");
+            throw new InvalidOperationException("Disciplina cu această limbă nu există în curriculumul grupei.");
         }
 
         // 5. Rule: sarcina totala a profesorului trebuie sa ramana in limitele normei / contractului
         await _workload.EnsureWithinLimitsAsync(assignment);
-
-        _context.TeachingAssignments.Add(assignment);
-        await _context.SaveChangesAsync();
     }
 }

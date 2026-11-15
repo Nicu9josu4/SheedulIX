@@ -64,3 +64,10 @@ Endpoint-uri: `GET /api/time-slots`, `GET|PUT /api/professors/{id}/availability?
 - **Interpretare din text liber** (`parse`): propune o grilă din fraze ca „nu pot joi, pot doar până la 12, prefer marți”. Nu salvează nimic; omul verifică grila și apoi salvează. Folosește **Claude** (`claude-opus-5-5`, rezultat JSON validat) dacă `ANTHROPIC_API_KEY` este setat în mediu sau `Anthropic:Enabled` este `true`; altfel, sau dacă apelul eșuează ori este refuzat, folosește **reguli simple** pentru formulările uzuale. Către Claude pleacă doar textul doleanței și grila de perechi, fără nume sau alte date personale.
 - **Verificare de fezabilitate**: perechile necesare pe săptămână (ore pe semestru ÷ 14 săptămâni ÷ 2 ore pe pereche) față de perechile libere în cele mai bune zile permise.
 - Aceste date vor fi folosite de generatorul de orar (etapa următoare); deocamdată se salvează și se verifică doar fezabilitatea sarcinii.
+
+### Verificarea repartizărilor (disponibilitate + normă)
+
+- `POST /api/teachingassignments/check` verifică o repartizare **fără să o salveze** și întoarce: erori (calificare, limbă, curriculum, curs pe subgrupe, depășirea normei), norma anuală rezultată, dacă orele încap în disponibilitatea declarată și avertismente. Erorile blochează salvarea; disponibilitatea insuficientă este doar avertisment (sunt dorințe, nu reguli).
+- În ecranul **Sarcină didactică**, verificarea rulează în timp real pe măsură ce completezi formularul (cu an universitar și semestru).
+- `GET /api/departments/{id}/feasibility?academicYear=` listează profesorii al căror volum de ore nu încape în disponibilitatea declarată.
+- La depunerea statului de funcții, avertismentele de disponibilitate se adaugă în istoricul de aprobare (nu blochează depunerea).

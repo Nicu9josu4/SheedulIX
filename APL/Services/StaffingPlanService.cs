@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 namespace AcademicManagement.Services;
 
 /// <summary>Fluxul de aprobare a statului de functii al unui departament.</summary>
-public class StaffingPlanService(AppDbContext context, WorkloadService workload)
+public class StaffingPlanService(AppDbContext context, WorkloadService workload, AvailabilityService availability)
 {
     // Draft → Submitted → DepartmentApproved → FacultyApproved → Approved ; orice pas de aprobare poate fi Rejected ; Rejected → Draft
     private static readonly Dictionary<StaffingPlanStatus, StaffingPlanStatus[]> Transitions = new()
@@ -50,6 +50,15 @@ public class StaffingPlanService(AppDbContext context, WorkloadService workload)
             var problems = await HardViolationsAsync(plan);
             if (problems.Count > 0)
                 throw new InvalidOperationException("Statul nu poate fi depus: " + string.Join(" | ", problems));
+
+            // Disponibilitatea nu blochează depunerea (sunt dorințe), dar avertismentele rămân în istoricul de aprobare.
+            var infeasible = await availability.DepartmentFeasibilityAsync(plan.DepartmentId, plan.AcademicYear);
+            if (infeasible.Count > 0)
+            {
+                var note = "Avertismente de disponibilitate: " + string.Join("; ", infeasible.Select(p =>
+                    $"{p.FullName} (sem. {string.Join(", ", p.Problems.Select(x => x.Semester))})"));
+                comment = string.IsNullOrWhiteSpace(comment) ? note : comment + " | " + note;
+            }
         }
 
         context.ApprovalSteps.Add(new ApprovalStep

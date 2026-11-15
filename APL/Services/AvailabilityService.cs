@@ -22,6 +22,8 @@ public record AvailabilityView(
 
 public record FeasibilityRow(int Semester, int PhysicalHours, decimal PairsPerWeekNeeded, int PairsPerWeekAvailable, int DaysAvailable, bool Ok, string Message);
 
+public record DepartmentFeasibilityRow(Guid ProfessorProfileId, string FullName, List<FeasibilityRow> Problems);
+
 /// <summary>Disponibilitatea profesorului (grila săptămânală, zile maxime, angajamente externe) și verificarea de fezabilitate.</summary>
 public class AvailabilityService(AppDbContext context)
 {
@@ -121,7 +123,8 @@ public class AvailabilityService(AppDbContext context)
     /// Încape sarcina repartizată în disponibilitatea declarată? Compară perechile necesare pe săptămână
     /// (ore pe semestru / 14 săptămâni / 2 ore pe pereche) cu perechile libere, limitate la cele mai bune zile.
     /// </summary>
-    public async Task<List<FeasibilityRow>> FeasibilityAsync(Guid professorId, string academicYear)
+    /// <param name="extra">Ore ipotetice de adăugat într-un semestru (ex. o repartizare nouă, înainte de salvare).</param>
+    public async Task<List<FeasibilityRow>> FeasibilityAsync(Guid professorId, string academicYear, (int Semester, int Hours)? extra = null)
     {
         var view = await GetAsync(professorId, academicYear);
         var slots = (await SlotsAsync()).Where(s => !s.IsLunchBreak).Select(s => s.SlotNumber).ToList();
@@ -143,7 +146,7 @@ public class AvailabilityService(AppDbContext context)
         var rows = new List<FeasibilityRow>();
         foreach (var semester in new[] { 1, 2 })
         {
-            int h = hours.FirstOrDefault(x => x.Semester == semester)?.Hours ?? 0;
+            int h = (hours.FirstOrDefault(x => x.Semester == semester)?.Hours ?? 0) + (extra is { } e && e.Semester == semester ? e.Hours : 0);
             decimal needed = Math.Round((decimal)h / WeeksPerSemester / HoursPerPair, 1);
             bool ok = needed <= capacity;
             string msg = h == 0 ? "Nicio repartizare în acest semestru."
@@ -152,6 +155,24 @@ public class AvailabilityService(AppDbContext context)
             rows.Add(new FeasibilityRow(semester, h, needed, capacity, usable.Count, ok, msg));
         }
         return rows;
+    }
+
+    /// <summary>Profesorii unui departament ale căror ore repartizate nu încap în disponibilitatea declarată.</summary>
+    public async Task<List<DepartmentFeasibilityRow>> DepartmentFeasibilityAsync(Guid departmentId, string academicYear)
+    {
+        WorkloadService.AcademicYearRange(academicYear);
+        var profiles = await context.ProfessorProfiles
+            .Where(p => p.Person.Employments.Any(e => e.DepartmentId == departmentId && e.Active))
+            .Select(p => new { p.Id, Name = p.Person.LastName + " " + p.Person.FirstName })
+            .ToListAsync();
+
+        var result = new List<DepartmentFeasibilityRow>();
+        foreach (var p in profiles)
+        {
+            var bad = (await FeasibilityAsync(p.Id, academicYear)).Where(r => !r.Ok).ToList();
+            if (bad.Count > 0) result.Add(new DepartmentFeasibilityRow(p.Id, p.Name, bad));
+        }
+        return result.OrderBy(r => r.FullName).ToList();
     }
 
     private async Task EnsureProfessorAsync(Guid professorId, string academicYear)

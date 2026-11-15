@@ -309,8 +309,10 @@ document.addEventListener('alpine:init', () => {
             languageId: '',
             activityType: 'Lecture',
             hours: 30,
-            semester: 1
+            semester: 1,
+            academicYear: '2026-2027'
         },
+        assignCheck: null,
 
         // ===== Disponibilitate =====
         availSlots() { return this.avail.slots.filter(s => !s.isLunchBreak); },
@@ -758,21 +760,40 @@ document.addEventListener('alpine:init', () => {
                 if (this.assignmentForm.activityType === 'Lecture' && this.assignmentForm.subgroupId) {
                     alert("Cursul nu poate fi atribuit pe subgrupe!"); return;
                 }
-                const payload = {
-                    professorProfileId: this.assignmentForm.professorProfileId,
-                    subjectId: this.assignmentForm.subjectId,
-                    groupId: this.assignmentForm.groupId,
-                    subgroupId: this.assignmentForm.subgroupId || null,
-                    languageId: this.assignmentForm.languageId,
-                    activityType: ActivityTypeMap[this.assignmentForm.activityType] ?? 0,
-                    hours: parseInt(this.assignmentForm.hours),
-                    semester: parseInt(this.assignmentForm.semester)
-                };
+                const payload = this.assignmentPayload();
 
                 await ApiService.createTeachingAssignment(payload);
                 alert("Sarcina didactică a fost salvată!");
                 await this.loadDashboard();
+                await this.runAssignCheck();
             } catch (err) { alert(`Eroare la repartizare: ${err.message}`); }
+        },
+
+        assignmentPayload() {
+            const f = this.assignmentForm;
+            return {
+                professorProfileId: f.professorProfileId,
+                subjectId: f.subjectId,
+                groupId: f.groupId,
+                subgroupId: f.subgroupId || null,
+                languageId: f.languageId,
+                activityType: ActivityTypeMap[f.activityType] ?? 0,
+                hours: parseInt(f.hours),
+                semester: parseInt(f.semester),
+                academicYear: (f.academicYear || '').trim()
+            };
+        },
+
+        // Verificare în timp real (nu salvează): reguli + normă anuală + disponibilitate
+        async runAssignCheck() {
+            const f = this.assignmentForm;
+            if (!f.professorProfileId || !f.subjectId || !f.groupId || !f.languageId || !(parseInt(f.hours) > 0)) { this.assignCheck = null; return; }
+            try {
+                const res = await fetch(`${API_BASE_URL}/teachingassignments/check`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(this.assignmentPayload())
+                });
+                this.assignCheck = res.ok ? await res.json() : null;
+            } catch (e) { this.assignCheck = null; }
         },
 
         searchExistingPerson() {
