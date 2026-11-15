@@ -695,7 +695,7 @@
                         </template>
 
                         <div x-show="importReport && !importReport.committed" class="pt-2">
-                            <button @click="runImport('commit')" :disabled="importBusy || importReport.totalErrors > 0"
+                            <button @click="runImport('commit')" :disabled="importBusy || (importReport && importReport.totalErrors > 0)"
                                 :class="importReport && importReport.totalErrors > 0 ? 'bg-slate-300 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700'"
                                 class="text-white px-5 py-2 rounded text-sm font-medium">
                                 Salvează în baza de date

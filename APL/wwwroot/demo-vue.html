@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="ro">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SchedulIX — machetă SPA (Vue + Vuetify)</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vuetify@3.7.2/dist/vuetify.min.css">
+  <style>
+    body { font-family: Roboto, system-ui, sans-serif; }
+    .demo-note { font-size: .75rem; opacity: .7; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <v-app>
+
+    <!-- Bară sus -->
+    <v-app-bar flat border density="comfortable">
+      <v-app-bar-nav-icon @click="drawer = !drawer"></v-app-bar-nav-icon>
+      <v-app-bar-title><b>SchedulIX</b> <span class="text-medium-emphasis">· Sarcină didactică 2026–2027</span></v-app-bar-title>
+      <v-btn-toggle v-model="dark" density="compact" variant="outlined" divided class="mr-3">
+        <v-btn :value="false" icon="mdi-white-balance-sunny"></v-btn>
+        <v-btn :value="true" icon="mdi-weather-night"></v-btn>
+      </v-btn-toggle>
+      <v-btn color="primary" prepend-icon="mdi-plus" @click="openDialog()">Repartizare nouă</v-btn>
+    </v-app-bar>
+
+    <!-- Meniu lateral -->
+    <v-navigation-drawer v-model="drawer" :rail="rail" permanent>
+      <v-list nav density="comfortable">
+        <v-list-item prepend-icon="mdi-view-dashboard" title="Panou general" value="d"></v-list-item>
+        <v-list-item prepend-icon="mdi-domain" title="Departamente" value="dep"></v-list-item>
+        <v-list-item prepend-icon="mdi-account-tie" title="Cadre didactice" value="cd" active color="primary"></v-list-item>
+        <v-list-item prepend-icon="mdi-book-open-variant" title="Discipline" value="di"></v-list-item>
+        <v-list-item prepend-icon="mdi-notebook" title="Planuri de învățământ" value="pl"></v-list-item>
+        <v-list-item prepend-icon="mdi-account-group" title="Grupe" value="gr"></v-list-item>
+        <v-list-item prepend-icon="mdi-clipboard-check" title="Sarcină didactică" value="sd"></v-list-item>
+        <v-list-item prepend-icon="mdi-file-sign" title="Stat de funcții" value="sf"></v-list-item>
+        <v-list-item prepend-icon="mdi-file-import" title="Import date" value="im"></v-list-item>
+      </v-list>
+    </v-navigation-drawer>
+
+    <v-main class="bg-grey-lighten-4">
+      <v-container fluid class="pa-6">
+
+        <!-- Cifre -->
+        <v-row>
+          <v-col cols="6" md="3" v-for="k in kpis" :key="k.label">
+            <v-card border flat>
+              <v-card-text class="d-flex align-center">
+                <v-avatar :color="k.color" variant="tonal" size="48" class="mr-4"><v-icon :icon="k.icon"></v-icon></v-avatar>
+                <div><div class="text-h5 font-weight-bold">{{ k.value }}</div><div class="text-medium-emphasis">{{ k.label }}</div></div>
+              </v-card-text>
+            </v-card>
+          </v-col>
+        </v-row>
+
+        <!-- Tabel -->
+        <v-card border flat class="mt-2">
+          <v-card-title class="d-flex flex-wrap align-center ga-3 pt-4">
+            <span>Cadre didactice și încărcare</span>
+            <v-spacer></v-spacer>
+            <v-select v-model="deptFilter" :items="depts" label="Departament" clearable density="compact" hide-details style="max-width:260px" variant="outlined"></v-select>
+            <v-chip-group v-model="stateFilter" selected-class="text-primary">
+              <v-chip value="deficit" filter variant="outlined" color="warning">Sub normă</v-chip>
+              <v-chip value="ok" filter variant="outlined" color="success">În normă</v-chip>
+              <v-chip value="over" filter variant="outlined" color="error">Peste normă</v-chip>
+            </v-chip-group>
+            <v-text-field v-model="search" prepend-inner-icon="mdi-magnify" label="Caută…" density="compact" hide-details variant="outlined" style="max-width:240px"></v-text-field>
+          </v-card-title>
+
+          <v-data-table
+            :headers="headers" :items="filtered" :search="search" item-value="id"
+            v-model:expanded="expanded" show-expand :items-per-page="10"
+            :items-per-page-options="[10,25,50]" items-per-page-text="Rânduri pe pagină"
+            no-data-text="Niciun rezultat" hover>
+
+            <template #item.fullName="{ item }">
+              <div class="d-flex align-center py-2">
+                <v-avatar size="34" color="primary" variant="tonal" class="mr-3">{{ initials(item.fullName) }}</v-avatar>
+                <div><div class="font-weight-medium">{{ item.fullName }}</div><div class="text-caption text-medium-emphasis">{{ item.email || '—' }}</div></div>
+              </div>
+            </template>
+            <template #item.type="{ item }">
+              <v-chip size="small" :color="types[item.type][1]" variant="tonal">{{ types[item.type][0] }}</v-chip>
+            </template>
+            <template #item.load="{ item }">
+              <div class="d-flex align-center ga-3" style="min-width:260px">
+                <v-progress-linear :model-value="Math.min(100, item.load / item.max * 100)" :color="stateColor(item)" height="8" rounded></v-progress-linear>
+                <v-text-field v-model.number="item.load" type="number" density="compact" hide-details variant="underlined" style="max-width:84px"
+                  suffix="h" @update:model-value="touched(item)"></v-text-field>
+              </div>
+            </template>
+            <template #item.state="{ item }">
+              <v-chip size="small" :color="stateColor(item)" variant="flat">{{ stateLabel(item) }}</v-chip>
+            </template>
+
+            <template #expanded-row="{ columns, item }">
+              <tr><td :colspan="columns.length" class="bg-grey-lighten-5 pa-4">
+                <div class="text-subtitle-2 mb-2">Normă pentru funcția „{{ item.position || '—' }}” (valori demonstrative)</div>
+                <div class="d-flex ga-6 flex-wrap">
+                  <div><div class="text-caption text-medium-emphasis">Minim</div><b>{{ item.min }} h</b></div>
+                  <div><div class="text-caption text-medium-emphasis">Normă de bază</div><b>{{ item.base }} h</b></div>
+                  <div><div class="text-caption text-medium-emphasis">Maxim</div><b>{{ item.max }} h</b></div>
+                  <div><div class="text-caption text-medium-emphasis">Alocat acum</div><b>{{ item.load }} h</b></div>
+                  <div><div class="text-caption text-medium-emphasis">Diferență față de normă</div><b :class="'text-' + stateColor(item)">{{ item.load - item.base > 0 ? '+' : '' }}{{ item.load - item.base }} h</b></div>
+                </div>
+              </td></tr>
+            </template>
+          </v-data-table>
+          <v-card-text class="demo-note"><v-icon size="14" icon="mdi-information-outline"></v-icon>
+            Machetă: persoanele, departamentele și funcțiile sunt reale din baza de date; normele și orele alocate sunt demonstrative. Încearcă: sortează pe o coloană, filtrează, editează orele direct în tabel, extinde un rând, comută tema.</v-card-text>
+        </v-card>
+
+        <!-- Dialog repartizare nouă, cu validare în timp real -->
+        <v-dialog v-model="dialog" max-width="560">
+          <v-card title="Repartizare nouă">
+            <v-card-text class="d-flex flex-column ga-3">
+              <v-autocomplete v-model="form.prof" :items="rows" item-title="fullName" item-value="id" label="Profesor" variant="outlined" density="comfortable" hide-details></v-autocomplete>
+              <v-autocomplete v-model="form.subject" :items="subjects" label="Disciplină" variant="outlined" density="comfortable" hide-details></v-autocomplete>
+              <v-btn-toggle v-model="form.activity" mandatory divided color="primary" variant="outlined">
+                <v-btn value="Curs">Curs ×2</v-btn><v-btn value="Seminar">Seminar ×1</v-btn><v-btn value="Laborator">Laborator ×1</v-btn>
+              </v-btn-toggle>
+              <v-text-field v-model.number="form.hours" type="number" label="Ore pe semestru" variant="outlined" density="comfortable" hide-details></v-text-field>
+
+              <v-alert v-if="preview" :type="preview.over ? 'error' : preview.ok ? 'success' : 'warning'" variant="tonal" density="comfortable">
+                <b>{{ preview.name }}</b>: {{ preview.before }} h → <b>{{ preview.after }} h</b> / maxim {{ preview.max }} h.
+                <span v-if="preview.over"> Depășește limita: repartizarea nu se poate salva.</span>
+                <span v-else-if="preview.ok"> În limitele normei.</span>
+                <span v-else> Încă sub norma minimă ({{ preview.min }} h).</span>
+              </v-alert>
+            </v-card-text>
+            <v-card-actions><v-spacer></v-spacer>
+              <v-btn @click="dialog = false">Anulează</v-btn>
+              <v-btn color="primary" variant="flat" :disabled="!preview || preview.over || !form.subject || !(form.hours > 0)" @click="save">Salvează</v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
+
+        <v-snackbar v-model="snack.show" color="success" timeout="3000">{{ snack.text }}</v-snackbar>
+      </v-container>
+    </v-main>
+  </v-app>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/vue@3.4.38/dist/vue.global.prod.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vuetify@3.7.2/dist/vuetify.min.js"></script>
+<script>
+const { createApp, ref, computed, watch, onMounted } = Vue;
+const vuetify = Vuetify.createVuetify();
+
+// norme DEMONSTRATIVE [minim, bază, maxim] ore conv./an
+const DEMO_NORMS = { "Profesor universitar": [300,350,400], "Conferențiar universitar": [400,450,500],
+  "Lector universitar": [450,500,550], "Asistent universitar": [500,550,600], "Inginer principal": [0,150,250] };
+const COEF = { Curs: 2, Seminar: 1, Laborator: 1 };
+const TYPES = { 0: ["Titular","green"], 1: ["Cumul intern","blue"], 2: ["Cumul extern","orange"] };
+
+function demoLoad(id) { let h = 0; for (const c of id) h = (h * 31 + c.charCodeAt(0)) >>> 0; return 250 + (h % 380); }
+
+createApp({
+  setup() {
+    const theme = Vuetify.useTheme();
+    const drawer = ref(true), rail = ref(false), dark = ref(false);
+    const rows = ref([]), subjects = ref([]), stats = ref({});
+    const search = ref(""), deptFilter = ref(null), stateFilter = ref(null), expanded = ref([]);
+    const dialog = ref(false), snack = ref({ show: false, text: "" });
+    const form = ref({ prof: null, subject: null, activity: "Curs", hours: 30 });
+
+    watch(dark, v => theme.global.name.value = v ? "dark" : "light");
+
+    const state = r => r.load > r.max ? "over" : r.load < r.min ? "deficit" : "ok";
+    const stateColor = r => ({ over: "error", deficit: "warning", ok: "success" })[state(r)];
+    const stateLabel = r => ({ over: "Peste normă", deficit: "Sub normă", ok: "În normă" })[state(r)];
+    const initials = n => n.split(" ").map(x => x[0]).slice(0, 2).join("");
+    const touched = r => { r.load = Number(r.load) || 0; };
+
+    const headers = [
+      { title: "Nume", key: "fullName" }, { title: "Departament", key: "dept" }, { title: "Funcție", key: "position" },
+      { title: "Tip", key: "type" }, { title: "Ore conv. / an", key: "load", sortable: true }, { title: "Stare", key: "state", sortable: false },
+      { title: "", key: "data-table-expand" },
+    ];
+    const depts = computed(() => [...new Set(rows.value.map(r => r.dept))].sort());
+    const filtered = computed(() => rows.value.filter(r => (!deptFilter.value || r.dept === deptFilter.value) && (!stateFilter.value || state(r) === stateFilter.value)));
+    const kpis = computed(() => [
+      { label: "Cadre didactice", value: rows.value.length, icon: "mdi-account-multiple", color: "primary" },
+      { label: "Sub normă", value: rows.value.filter(r => state(r) === "deficit").length, icon: "mdi-arrow-down-bold", color: "warning" },
+      { label: "Peste normă", value: rows.value.filter(r => state(r) === "over").length, icon: "mdi-alert", color: "error" },
+      { label: "În cumul", value: (stats.value.cumulInternCount || 0) + (stats.value.cumulExternCount || 0), icon: "mdi-account-switch", color: "orange" },
+    ]);
+
+    const preview = computed(() => {
+      const r = rows.value.find(x => x.id === form.value.prof);
+      if (!r) return null;
+      const add = (form.value.hours > 0 ? form.value.hours : 0) * COEF[form.value.activity];
+      const after = r.load + add;
+      return { name: r.fullName, before: r.load, after, min: r.min, max: r.max, over: after > r.max, ok: after >= r.min && after <= r.max };
+    });
+    const openDialog = () => { form.value = { prof: null, subject: null, activity: "Curs", hours: 30 }; dialog.value = true; };
+    const save = () => {
+      const r = rows.value.find(x => x.id === form.value.prof);
+      r.load = preview.value.after; dialog.value = false;
+      snack.value = { show: true, text: `Repartizare salvată pentru ${r.fullName}.` };
+    };
+
+    onMounted(async () => {
+      const [profs, st, subs] = await Promise.all([fetch("/api/professors").then(r => r.json()),
+        fetch("/api/dashboard/stats").then(r => r.json()), fetch("/api/subjects").then(r => r.json())]);
+      stats.value = st;
+      subjects.value = [...new Set(subs.map(s => s.name))].sort();
+      rows.value = profs.map(p => {
+        const e = p.employments[0] || {};
+        const n = DEMO_NORMS[e.position] || [0, 400, 600];
+        return { id: p.id, fullName: p.fullName, email: p.email, dept: e.name || "—", position: e.position || "", type: e.employmentType ?? 0,
+                 min: n[0], base: n[1], max: n[2], load: demoLoad(p.id) };
+      });
+    });
+
+    return { drawer, rail, dark, rows, subjects, search, deptFilter, stateFilter, expanded, dialog, snack, form, headers, depts, filtered, kpis,
+             preview, types: TYPES, stateColor, stateLabel, initials, touched, openDialog, save };
+  }
+}).use(vuetify).mount("#app");
+</script>
+</body>
+</html>
