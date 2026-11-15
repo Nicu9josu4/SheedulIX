@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="ro">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SchedulIX — machetă stil Tabler</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0/dist/css/tabler.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+  <style>
+    .norm-bar { height: 8px; }
+    .demo-note { font-size: .75rem; }
+    [x-cloak]{display:none!important}
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ===== Meniu lateral ===== -->
+  <aside class="navbar navbar-vertical navbar-expand-lg" data-bs-theme="dark">
+    <div class="container-fluid">
+      <h1 class="navbar-brand navbar-brand-autodark">
+        <a href="#" class="d-flex align-items-center gap-2 text-white text-decoration-none">
+          <i class="ti ti-school fs-2 text-azure"></i><span>SchedulIX</span>
+        </a>
+      </h1>
+      <div class="collapse navbar-collapse" id="navbar-menu">
+        <ul class="navbar-nav pt-lg-3">
+          <li class="nav-item"><a class="nav-link active" href="#"><span class="nav-link-icon"><i class="ti ti-layout-dashboard"></i></span><span class="nav-link-title">Panou general</span></a></li>
+          <li class="nav-item"><a class="nav-link" href="#"><span class="nav-link-icon"><i class="ti ti-building"></i></span><span class="nav-link-title">Departamente</span></a></li>
+          <li class="nav-item"><a class="nav-link" href="#"><span class="nav-link-icon"><i class="ti ti-users"></i></span><span class="nav-link-title">Cadre didactice</span></a></li>
+          <li class="nav-item"><a class="nav-link" href="#"><span class="nav-link-icon"><i class="ti ti-books"></i></span><span class="nav-link-title">Discipline</span></a></li>
+          <li class="nav-item"><a class="nav-link" href="#"><span class="nav-link-icon"><i class="ti ti-notebook"></i></span><span class="nav-link-title">Planuri de învățământ</span></a></li>
+          <li class="nav-item"><a class="nav-link" href="#"><span class="nav-link-icon"><i class="ti ti-users-group"></i></span><span class="nav-link-title">Grupe</span></a></li>
+          <li class="nav-item"><a class="nav-link" href="#"><span class="nav-link-icon"><i class="ti ti-clipboard-check"></i></span><span class="nav-link-title">Sarcină didactică</span></a></li>
+          <li class="nav-item"><a class="nav-link" href="#"><span class="nav-link-icon"><i class="ti ti-file-certificate"></i></span><span class="nav-link-title">Stat de funcții</span><span class="badge badge-sm bg-orange text-white ms-auto">2</span></a></li>
+          <li class="nav-item"><a class="nav-link" href="#"><span class="nav-link-icon"><i class="ti ti-file-import"></i></span><span class="nav-link-title">Import date</span></a></li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+
+  <div class="page-wrapper">
+    <!-- ===== Antet ===== -->
+    <div class="page-header d-print-none">
+      <div class="container-xl">
+        <div class="row g-2 align-items-center">
+          <div class="col">
+            <div class="page-pretitle">Anul universitar 2026–2027 · FCIM</div>
+            <h2 class="page-title">Panou general</h2>
+          </div>
+          <div class="col-auto ms-auto d-print-none">
+            <div class="btn-list">
+              <a href="#" class="btn btn-outline-primary d-none d-sm-inline-block"><i class="ti ti-file-import me-1"></i>Importă din Excel</a>
+              <a href="#" class="btn btn-primary"><i class="ti ti-plus me-1"></i>Repartizare nouă</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-body">
+      <div class="container-xl">
+
+        <!-- ===== Pași ghidați pentru șeful de departament ===== -->
+        <div class="card mb-3">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h3 class="card-title m-0">Statul de funcții — Departamentul Ingineria Sistemelor</h3>
+              <span class="badge bg-yellow-lt text-yellow">Ciornă</span>
+            </div>
+            <ol class="steps steps-azure steps-counter my-4">
+              <li class="step-item">Plan de învățământ</li>
+              <li class="step-item">Calificări</li>
+              <li class="step-item active">Repartizare ore</li>
+              <li class="step-item">Verificare norme</li>
+              <li class="step-item">Aprobare</li>
+            </ol>
+            <div class="text-secondary">Următorul pas: repartizează orele rămase. <b>3 cadre</b> sunt sub norma minimă.</div>
+          </div>
+        </div>
+
+        <!-- ===== Carduri cu cifre ===== -->
+        <div class="row row-deck row-cards mb-3" id="stats">
+          <div class="col-sm-6 col-lg-3"><div class="card"><div class="card-body">
+            <div class="d-flex align-items-center"><span class="bg-azure text-white avatar me-3"><i class="ti ti-users"></i></span>
+              <div><div class="h2 mb-0" id="s-emp">…</div><div class="text-secondary">Cadre didactice</div></div></div></div></div></div>
+          <div class="col-sm-6 col-lg-3"><div class="card"><div class="card-body">
+            <div class="d-flex align-items-center"><span class="bg-green text-white avatar me-3"><i class="ti ti-user-check"></i></span>
+              <div><div class="h2 mb-0" id="s-head">…</div><div class="text-secondary">Titulari</div></div></div></div></div></div>
+          <div class="col-sm-6 col-lg-3"><div class="card"><div class="card-body">
+            <div class="d-flex align-items-center"><span class="bg-orange text-white avatar me-3"><i class="ti ti-arrows-split"></i></span>
+              <div><div class="h2 mb-0" id="s-cumul">…</div><div class="text-secondary">În cumul</div></div></div></div></div></div>
+          <div class="col-sm-6 col-lg-3"><div class="card"><div class="card-body">
+            <div class="d-flex align-items-center"><span class="bg-purple text-white avatar me-3"><i class="ti ti-users-group"></i></span>
+              <div><div class="h2 mb-0" id="s-groups">…</div><div class="text-secondary">Grupe</div></div></div></div></div></div>
+        </div>
+
+        <!-- ===== Tabel cadre didactice cu semafor ===== -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Cadre didactice și încărcare</h3>
+            <div class="card-actions d-flex gap-2">
+              <select class="form-select form-select-sm" id="f-dept" style="width:auto"><option value="">Toate departamentele</option></select>
+              <select class="form-select form-select-sm" id="f-status" style="width:auto">
+                <option value="">Toate stările</option><option value="deficit">Sub normă</option><option value="ok">În normă</option><option value="over">Peste normă</option>
+              </select>
+              <div class="input-icon"><span class="input-icon-addon"><i class="ti ti-search"></i></span>
+                <input type="text" id="f-q" class="form-control form-control-sm" placeholder="Caută nume sau email…"></div>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="table card-table table-vcenter table-hover">
+              <thead><tr><th>Nume</th><th>Departament</th><th>Funcție</th><th>Tip</th><th style="width:26%">Ore conv. / normă anuală</th><th>Stare</th></tr></thead>
+              <tbody id="rows"><tr><td colspan="6" class="text-center text-secondary py-4">Se încarcă…</td></tr></tbody>
+            </table>
+          </div>
+          <div class="card-footer d-flex align-items-center">
+            <p class="m-0 text-secondary"><span id="count">0</span> cadre afișate</p>
+            <span class="ms-auto demo-note text-secondary"><i class="ti ti-info-circle"></i> Încărcarea (bara) este demonstrativă în această machetă; restul datelor sunt reale din baza de date.</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0/dist/js/tabler.min.js"></script>
+<script>
+const TYPES = {0:["Titular","green"],1:["Cumul intern","azure"],2:["Cumul extern","orange"]};
+let all = [];
+
+function demoLoad(id, type) {            // valoare stabilă derivată din id, doar pentru demonstrație
+  let h = 0; for (const c of id) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return 280 + (h % 330);                // 280–609 ore
+}
+
+function render() {
+  const q = document.getElementById("f-q").value.toLowerCase();
+  const dept = document.getElementById("f-dept").value;
+  const st = document.getElementById("f-status").value;
+  const NORM = 450, MIN = 400, MAX = 500;
+  const out = all.filter(p => (!dept || p.dept === dept) && (!q || (p.fullName + p.email).toLowerCase().includes(q)))
+    .map(p => ({...p, load: demoLoad(p.id)}))
+    .map(p => ({...p, state: p.load > MAX ? "over" : p.load < MIN ? "deficit" : "ok"}))
+    .filter(p => !st || p.state === st);
+
+  const color = {over:"danger", deficit:"warning", ok:"success"};
+  const label = {over:"Peste normă", deficit:"Sub normă", ok:"În normă"};
+  document.getElementById("rows").innerHTML = out.map(p => {
+    const [tn, tc] = TYPES[p.type] ?? ["—","secondary"];
+    const pct = Math.min(100, Math.round(p.load / MAX * 100));
+    return `<tr>
+      <td><div class="d-flex align-items-center"><span class="avatar avatar-sm me-2 bg-azure-lt">${p.fullName.split(" ").map(x=>x[0]).slice(0,2).join("")}</span>
+        <div><div>${p.fullName}</div><div class="text-secondary small">${p.email || "—"}</div></div></div></td>
+      <td>${p.dept}</td><td class="text-secondary">${p.position || "—"}</td>
+      <td><span class="badge bg-${tc}-lt text-${tc}">${tn}</span></td>
+      <td><div class="d-flex align-items-center gap-2"><div class="progress progress-sm flex-fill norm-bar"><div class="progress-bar bg-${color[p.state]}" style="width:${pct}%"></div></div>
+        <span class="small text-secondary" style="min-width:70px">${p.load} / ${NORM}</span></div></td>
+      <td><span class="status status-${color[p.state]}"><span class="status-dot status-dot-animated"></span>${label[p.state]}</span></td>
+    </tr>`;
+  }).join("") || `<tr><td colspan="6" class="text-center text-secondary py-4">Niciun rezultat.</td></tr>`;
+  document.getElementById("count").textContent = out.length;
+}
+
+(async () => {
+  const [stats, profs] = await Promise.all([fetch("/api/dashboard/stats").then(r => r.json()), fetch("/api/professors").then(r => r.json())]);
+  document.getElementById("s-emp").textContent = stats.totalEmployees;
+  document.getElementById("s-head").textContent = stats.titulariCount;
+  document.getElementById("s-cumul").textContent = stats.cumulInternCount + stats.cumulExternCount;
+  document.getElementById("s-groups").textContent = stats.totalGroups;
+  all = profs.map(p => ({id: p.id, fullName: p.fullName, email: p.email, dept: p.employments[0]?.name ?? "—",
+                         position: p.employments[0]?.position, type: p.employments[0]?.employmentType}));
+  const depts = [...new Set(all.map(p => p.dept))].sort();
+  document.getElementById("f-dept").innerHTML += depts.map(d => `<option>${d}</option>`).join("");
+  ["f-q","f-dept","f-status"].forEach(id => document.getElementById(id).addEventListener("input", render));
+  render();
+})();
+</script>
+</body>
+</html>
