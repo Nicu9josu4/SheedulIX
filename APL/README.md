@@ -50,3 +50,17 @@ Meniul **Import date** din interfață încarcă `UTM_sablon_import.xlsx` (șabl
 - `POST /api/import/commit` salvează doar dacă nu există nicio eroare (totul sau nimic, într-o tranzacție).
 - Idempotent: aceeași cheie (cod departament, email sau nume+prenume, cod+denumire disciplină) actualizează, nu dublează.
 - Celelalte foi din șablon (planuri, grupe, calificări, model de calcul, contracte, repartizări) nu sunt încă importate.
+
+## Disponibilitate (doleanțe de timp)
+
+Meniul **Disponibilitate** permite fiecărui cadru didactic (completat de șeful de departament sau de profesor) să declare, pe an universitar:
+- o **grilă săptămânală** zi × pereche cu stările *liber / nu pot / aș evita / prefer* (grila de perechi e în tabelul `TimeSlots`, valorile implicite trebuie confirmate cu orarul UTM);
+- numărul **maxim de zile de predare** pe săptămână;
+- **angajamente externe** (zi, interval, locație), care ocupă automat celulele grilei;
+- observații.
+
+Endpoint-uri: `GET /api/time-slots`, `GET|PUT /api/professors/{id}/availability?academicYear=`, `GET .../availability/feasibility?academicYear=`, `POST .../availability/parse`.
+
+- **Interpretare din text liber** (`parse`): propune o grilă din fraze ca „nu pot joi, pot doar până la 12, prefer marți”. Nu salvează nimic; omul verifică grila și apoi salvează. Folosește **Claude** (`claude-opus-5-5`, rezultat JSON validat) dacă `ANTHROPIC_API_KEY` este setat în mediu sau `Anthropic:Enabled` este `true`; altfel, sau dacă apelul eșuează ori este refuzat, folosește **reguli simple** pentru formulările uzuale. Către Claude pleacă doar textul doleanței și grila de perechi, fără nume sau alte date personale.
+- **Verificare de fezabilitate**: perechile necesare pe săptămână (ore pe semestru ÷ 14 săptămâni ÷ 2 ore pe pereche) față de perechile libere în cele mai bune zile permise.
+- Aceste date vor fi folosite de generatorul de orar (etapa următoare); deocamdată se salvează și se verifică doar fezabilitatea sarcinii.

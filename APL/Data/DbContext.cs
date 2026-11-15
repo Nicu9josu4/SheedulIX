@@ -22,6 +22,12 @@ public class AppDbContext : DbContext
     public DbSet<TeachingAssignment> TeachingAssignments => Set<TeachingAssignment>();
 
     // Sarcina didactica, cumul si aprobare
+    // Disponibilitate (doleanțe de timp)
+    public DbSet<TimeSlot> TimeSlots => Set<TimeSlot>();
+    public DbSet<AvailabilityBlock> AvailabilityBlocks => Set<AvailabilityBlock>();
+    public DbSet<AvailabilityPreference> AvailabilityPreferences => Set<AvailabilityPreference>();
+    public DbSet<ExternalCommitment> ExternalCommitments => Set<ExternalCommitment>();
+
     public DbSet<WorkloadModel> WorkloadModels => Set<WorkloadModel>();
     public DbSet<PositionNorm> PositionNorms => Set<PositionNorm>();
     public DbSet<ConversionCoefficient> ConversionCoefficients => Set<ConversionCoefficient>();
@@ -60,8 +66,49 @@ public class AppDbContext : DbContext
             .HasKey(ps => new { ps.ProfessorProfileId, ps.SubjectId });
     }
 
+    private static void ConfigureAvailability(ModelBuilder mb)
+    {
+        mb.Entity<TimeSlot>().ToTable("TimeSlots").HasKey(t => t.SlotNumber);
+        mb.Entity<TimeSlot>().Property(t => t.SlotNumber).ValueGeneratedNever();
+        // Grila implicită (de confirmat cu orarul real al UTM); modificabilă direct în tabel.
+        mb.Entity<TimeSlot>().HasData(
+            new TimeSlot { SlotNumber = 1, StartTime = new TimeSpan(8, 0, 0), EndTime = new TimeSpan(9, 30, 0) },
+            new TimeSlot { SlotNumber = 2, StartTime = new TimeSpan(9, 45, 0), EndTime = new TimeSpan(11, 15, 0) },
+            new TimeSlot { SlotNumber = 3, StartTime = new TimeSpan(11, 30, 0), EndTime = new TimeSpan(13, 0, 0) },
+            new TimeSlot { SlotNumber = 4, StartTime = new TimeSpan(13, 0, 0), EndTime = new TimeSpan(14, 30, 0), IsLunchBreak = true },
+            new TimeSlot { SlotNumber = 5, StartTime = new TimeSpan(14, 30, 0), EndTime = new TimeSpan(16, 0, 0) });
+
+        mb.Entity<AvailabilityBlock>().ToTable("AvailabilityBlocks");
+        mb.Entity<AvailabilityBlock>()
+            .HasOne(b => b.ProfessorProfile).WithMany()
+            .HasForeignKey(b => b.ProfessorProfileId).OnDelete(DeleteBehavior.Cascade);
+        mb.Entity<AvailabilityBlock>().Property(b => b.AcademicYear).HasMaxLength(9);
+        mb.Entity<AvailabilityBlock>().Property(b => b.State).HasConversion<string>().HasMaxLength(20);
+        mb.Entity<AvailabilityBlock>()
+            .HasIndex(b => new { b.ProfessorProfileId, b.AcademicYear, b.DayOfWeek, b.SlotNumber }).IsUnique();
+        mb.Entity<AvailabilityBlock>().ToTable(t => t.HasCheckConstraint("CK_AvailabilityBlocks_Day", "\"DayOfWeek\" BETWEEN 1 AND 6"));
+
+        mb.Entity<AvailabilityPreference>().ToTable("AvailabilityPreferences");
+        mb.Entity<AvailabilityPreference>()
+            .HasOne(p => p.ProfessorProfile).WithMany()
+            .HasForeignKey(p => p.ProfessorProfileId).OnDelete(DeleteBehavior.Cascade);
+        mb.Entity<AvailabilityPreference>().Property(p => p.AcademicYear).HasMaxLength(9);
+        mb.Entity<AvailabilityPreference>().Property(p => p.Notes).HasMaxLength(2000);
+        mb.Entity<AvailabilityPreference>().HasIndex(p => new { p.ProfessorProfileId, p.AcademicYear }).IsUnique();
+
+        mb.Entity<ExternalCommitment>().ToTable("ExternalCommitments");
+        mb.Entity<ExternalCommitment>()
+            .HasOne(c => c.ProfessorProfile).WithMany()
+            .HasForeignKey(c => c.ProfessorProfileId).OnDelete(DeleteBehavior.Cascade);
+        mb.Entity<ExternalCommitment>().Property(c => c.AcademicYear).HasMaxLength(9);
+        mb.Entity<ExternalCommitment>().Property(c => c.Location).HasMaxLength(200);
+        mb.Entity<ExternalCommitment>().ToTable(t => t.HasCheckConstraint("CK_ExternalCommitments_Day", "\"DayOfWeek\" BETWEEN 1 AND 6"));
+    }
+
     private static void ConfigureWorkload(ModelBuilder mb)
     {
+        ConfigureAvailability(mb);
+
         mb.Entity<TeachingAssignment>().Property(a => a.AcademicYear).HasMaxLength(9);
         mb.Entity<TeachingAssignment>().HasIndex(a => new { a.ProfessorProfileId, a.AcademicYear, a.Semester });
         mb.Entity<TeachingAssignment>().ToTable(t =>

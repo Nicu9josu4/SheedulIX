@@ -52,6 +52,9 @@
                 <button @click="currentTab = 'import'" :class="currentTab === 'import' ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800 hover:text-white'" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition">
                     <i class="fa-solid fa-file-import w-5"></i><span>Import date</span>
                 </button>
+                <button @click="currentTab = 'availability'" :class="currentTab === 'availability' ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800 hover:text-white'" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition">
+                    <i class="fa-solid fa-calendar-check w-5"></i><span>Disponibilitate</span>
+                </button>
             </nav>
         </aside>
 
@@ -701,6 +704,137 @@
                                 Salvează în baza de date
                             </button>
                             <span x-show="importReport && importReport.totalErrors > 0" class="text-xs text-slate-500 ml-3">Corectează erorile în Excel și alege fișierul din nou.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DISPONIBILITATE (DOLEANȚE DE TIMP) -->
+                <div x-show="currentTab === 'availability'" x-cloak class="space-y-6 max-w-5xl">
+                    <div class="bg-white p-6 rounded-xl border shadow-sm space-y-4">
+                        <h3 class="font-bold text-slate-700 text-lg border-b pb-2">Disponibilitate cadru didactic</h3>
+                        <div class="flex flex-wrap items-end gap-3">
+                            <div>
+                                <label class="block text-xs text-slate-500 mb-1">Profesor</label>
+                                <select x-model="avail.professorId" @change="loadAvailability()" class="border rounded px-3 py-2 text-sm min-w-[260px]">
+                                    <option value="">Alege profesorul...</option>
+                                    <template x-for="p in professors" :key="p.id"><option :value="p.id" x-text="p.fullName"></option></template>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-slate-500 mb-1">An universitar</label>
+                                <input type="text" x-model="avail.year" @change="loadAvailability()" placeholder="2026-2027" class="border rounded px-3 py-2 text-sm w-32">
+                            </div>
+                        </div>
+                        <div x-show="avail.error" class="bg-red-50 border border-red-200 text-red-700 text-sm rounded p-3" x-text="avail.error"></div>
+                    </div>
+
+                    <div x-show="avail.loaded" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Grila -->
+                        <div class="lg:col-span-2 bg-white p-6 rounded-xl border shadow-sm space-y-4">
+                            <div class="flex items-center justify-between">
+                                <h4 class="font-semibold text-slate-700">Grila săptămânală</h4>
+                                <div class="flex flex-wrap items-center gap-3 text-xs text-slate-600">
+                                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded bg-white border"></span>Liber</span>
+                                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded bg-red-200"></span>Nu pot</span>
+                                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded bg-amber-200"></span>Aș evita</span>
+                                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded bg-emerald-200"></span>Prefer</span>
+                                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded bg-slate-300"></span>Ocupat extern</span>
+                                </div>
+                            </div>
+                            <p class="text-xs text-slate-500">Apasă pe o celulă ca să schimbi starea: liber → nu pot → aș evita → prefer → liber.</p>
+                            <table class="w-full text-sm border-separate border-spacing-1">
+                                <thead>
+                                    <tr>
+                                        <th class="w-24"></th>
+                                        <template x-for="s in availSlots()" :key="s.slot">
+                                            <th class="text-xs font-medium text-slate-600"><div x-text="'Pereche ' + s.slot"></div><div class="font-normal text-slate-400" x-text="s.start + '–' + s.end"></div></th>
+                                        </template>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-for="(dayName, di) in dayNames" :key="di">
+                                        <tr>
+                                            <td class="text-xs font-semibold text-slate-600 pr-2" x-text="dayName"></td>
+                                            <template x-for="s in availSlots()" :key="s.slot">
+                                                <td>
+                                                    <button type="button" @click="cycleCell(di + 1, s.slot)" :disabled="isBusy(di + 1, s.slot)"
+                                                        :class="cellClass(di + 1, s.slot)" class="w-full h-10 rounded text-sm font-bold transition">
+                                                        <span x-text="cellIcon(di + 1, s.slot)"></span>
+                                                    </button>
+                                                </td>
+                                            </template>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                                <div>
+                                    <label class="block text-xs text-slate-500 mb-1">Număr maxim de zile de predare pe săptămână</label>
+                                    <select x-model="avail.maxDays" class="border rounded px-3 py-2 text-sm w-full">
+                                        <option value="">Fără limită</option>
+                                        <template x-for="n in [1,2,3,4,5,6]" :key="n"><option :value="n" x-text="n"></option></template>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-slate-500 mb-1">Observații</label>
+                                    <input type="text" x-model="avail.notes" maxlength="2000" class="border rounded px-3 py-2 text-sm w-full" placeholder="ex. predau și la altă facultate">
+                                </div>
+                            </div>
+
+                            <!-- Angajamente externe -->
+                            <div class="border-t pt-4 space-y-2">
+                                <h4 class="font-semibold text-slate-700 text-sm">Ocupat în altă facultate / instituție</h4>
+                                <template x-for="(c, i) in avail.commitments" :key="i">
+                                    <div class="flex items-center gap-2 text-sm bg-slate-50 rounded px-3 py-1.5">
+                                        <span class="font-medium" x-text="dayNames[c.day - 1]"></span>
+                                        <span x-text="c.start + '–' + c.end"></span>
+                                        <span class="text-slate-500 flex-1" x-text="c.location"></span>
+                                        <button type="button" @click="avail.commitments.splice(i, 1); markDirty()" class="text-red-600 text-xs">Șterge</button>
+                                    </div>
+                                </template>
+                                <div class="flex flex-wrap items-end gap-2">
+                                    <select x-model.number="avail.newC.day" class="border rounded px-2 py-1.5 text-sm">
+                                        <template x-for="(d, i) in dayNames" :key="i"><option :value="i + 1" x-text="d"></option></template>
+                                    </select>
+                                    <input type="time" x-model="avail.newC.start" class="border rounded px-2 py-1.5 text-sm">
+                                    <input type="time" x-model="avail.newC.end" class="border rounded px-2 py-1.5 text-sm">
+                                    <input type="text" x-model="avail.newC.location" placeholder="Unde (ex. Facultatea X)" class="border rounded px-2 py-1.5 text-sm flex-1 min-w-[150px]">
+                                    <button type="button" @click="addCommitment()" class="border border-indigo-600 text-indigo-700 px-3 py-1.5 rounded text-sm">Adaugă</button>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center gap-3 pt-2 border-t">
+                                <button type="button" @click="saveAvailability()" :disabled="avail.busy" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded text-sm font-medium">Salvează disponibilitatea</button>
+                                <span x-show="avail.dirty" class="text-xs text-amber-600">Modificări nesalvate</span>
+                                <span x-show="avail.saved && !avail.dirty" class="text-xs text-emerald-600">Salvat</span>
+                            </div>
+                        </div>
+
+                        <!-- Interpretare text + fezabilitate -->
+                        <div class="space-y-6">
+                            <div class="bg-white p-6 rounded-xl border shadow-sm space-y-3">
+                                <h4 class="font-semibold text-slate-700">Scrie doleanța în cuvinte</h4>
+                                <textarea x-model="avail.text" rows="4" maxlength="2000" class="border rounded px-3 py-2 text-sm w-full" placeholder="ex. Nu pot joi. Pot doar până la ora 12. Prefer marți."></textarea>
+                                <button type="button" @click="parseAvailabilityText()" :disabled="avail.parsing || !avail.text.trim()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded text-sm font-medium w-full">
+                                    <span x-show="!avail.parsing">Interpretează și completează grila</span><span x-show="avail.parsing">Se interpretează...</span>
+                                </button>
+                                <div x-show="avail.parseSource" class="text-xs text-slate-500">
+                                    Interpretat cu: <b x-text="avail.parseSource === 'claude' ? 'Claude' : 'reguli simple'"></b>. <b>Verifică grila</b> și apoi salvează; nimic nu s-a salvat încă.
+                                </div>
+                                <template x-for="w in avail.warnings" :key="w"><div class="text-xs bg-amber-50 border border-amber-200 text-amber-800 rounded px-2 py-1" x-text="w"></div></template>
+                            </div>
+
+                            <div class="bg-white p-6 rounded-xl border shadow-sm space-y-3">
+                                <h4 class="font-semibold text-slate-700">Încape sarcina în disponibilitate?</h4>
+                                <template x-for="f in avail.feasibility" :key="f.semester">
+                                    <div :class="f.ok ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-red-50 border-red-200 text-red-800'" class="text-sm border rounded px-3 py-2">
+                                        <div class="font-semibold" x-text="'Semestrul ' + f.semester"></div>
+                                        <div x-text="f.message"></div>
+                                    </div>
+                                </template>
+                                <p class="text-xs text-slate-400">Calcul: ore pe semestru ÷ 14 săptămâni ÷ 2 ore pe pereche, față de perechile libere în cele mai bune zile.</p>
+                            </div>
                         </div>
                     </div>
                 </div>

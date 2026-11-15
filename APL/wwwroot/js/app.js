@@ -215,7 +215,8 @@ document.addEventListener('alpine:init', () => {
             'curriculum': 'Gestionare Curriculum & Planuri',
             'groups': 'Grupe & Subgrupe',
             'assignments': 'Repartizare Sarcină Didactică',
-            'import': 'Import date din Excel'
+            'import': 'Import date din Excel',
+            'availability': 'Disponibilitate cadre didactice'
         },
 
         // Date Nomenclatoare
@@ -245,6 +246,15 @@ document.addEventListener('alpine:init', () => {
         importReport: null,
         importBusy: false,
         importError: '',
+
+        // Disponibilitate (doleanțe de timp)
+        dayNames: ['Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă'],
+        avail: {
+            professorId: '', year: '2026-2027', loaded: false, busy: false, dirty: false, saved: false, error: '',
+            slots: [], cells: {}, busy_: {}, maxDays: '', notes: '', commitments: [],
+            newC: { day: 1, start: '08:00', end: '10:00', location: '' },
+            text: '', parsing: false, parseSource: '', warnings: [], feasibility: []
+        },
 
         isEditingCurriculum: false,
         editingCurriculumId: null,
@@ -300,6 +310,121 @@ document.addEventListener('alpine:init', () => {
             activityType: 'Lecture',
             hours: 30,
             semester: 1
+        },
+
+        // ===== Disponibilitate =====
+        availSlots() { return this.avail.slots.filter(s => !s.isLunchBreak); },
+        cellKey(d, s) { return d + '-' + s; },
+        isBusy(d, s) { return !!this.avail.busy_[this.cellKey(d, s)]; },
+        markDirty() { this.avail.dirty = true; this.avail.saved = false; },
+
+        cellClass(d, s) {
+            if (this.isBusy(d, s)) return 'bg-slate-300 cursor-not-allowed';
+            const st = this.avail.cells[this.cellKey(d, s)];
+            if (st === 'Blocked') return 'bg-red-200 text-red-700 hover:bg-red-300';
+            if (st === 'Avoid') return 'bg-amber-200 text-amber-700 hover:bg-amber-300';
+            if (st === 'Preferred') return 'bg-emerald-200 text-emerald-700 hover:bg-emerald-300';
+            return 'bg-white border hover:bg-slate-100 text-slate-300';
+        },
+        cellIcon(d, s) {
+            if (this.isBusy(d, s)) return '⛔';
+            return { Blocked: '✕', Avoid: '~', Preferred: '✓' }[this.avail.cells[this.cellKey(d, s)]] || '';
+        },
+        cycleCell(d, s) {
+            if (this.isBusy(d, s)) return;
+            const k = this.cellKey(d, s);
+            const next = { undefined: 'Blocked', Blocked: 'Avoid', Avoid: 'Preferred', Preferred: undefined }[this.avail.cells[k]];
+            const cells = { ...this.avail.cells };
+            if (next) cells[k] = next; else delete cells[k];
+            this.avail.cells = cells;
+            this.markDirty();
+        },
+
+        async loadAvailability() {
+            const a = this.avail;
+            a.error = ''; a.loaded = false; a.warnings = []; a.parseSource = ''; a.feasibility = [];
+            if (!a.professorId) return;
+            try {
+                const res = await fetch(`${API_BASE_URL}/professors/${a.professorId}/availability?academicYear=${encodeURIComponent(a.year)}`);
+                const data = await res.json();
+                if (!res.ok) { a.error = data.error || 'Nu s-a putut încărca disponibilitatea.'; return; }
+                a.slots = data.slots;
+                const cells = {};
+                data.availability.blocks.forEach(b => cells[this.cellKey(b.day, b.slot)] = b.state);
+                a.cells = cells;
+                const busy = {};
+                data.externallyBusy.forEach(b => busy[this.cellKey(b.day, b.slot)] = true);
+                a.busy_ = busy;
+                a.maxDays = data.availability.maxTeachingDays ?? '';
+                a.notes = data.availability.notes || '';
+                a.commitments = data.availability.commitments;
+                a.dirty = false; a.saved = false; a.loaded = true;
+                await this.loadFeasibility();
+            } catch (e) { a.error = 'Nu s-a putut contacta serverul.'; }
+        },
+
+        async loadFeasibility() {
+            const a = this.avail;
+            const res = await fetch(`${API_BASE_URL}/professors/${a.professorId}/availability/feasibility?academicYear=${encodeURIComponent(a.year)}`);
+            a.feasibility = res.ok ? await res.json() : [];
+        },
+
+        addCommitment() {
+            const a = this.avail, c = a.newC;
+            if (!c.start || !c.end || c.end <= c.start) { a.error = 'Ora de sfârșit trebuie să fie după ora de început.'; return; }
+            a.error = '';
+            a.commitments.push({ day: Number(c.day), start: c.start, end: c.end, location: c.location.trim() });
+            // celulele acoperite devin „ocupat extern” după salvare; până atunci marchez local
+            this.availSlots().forEach(s => {
+                if (c.start < s.end && c.end > s.start) this.avail.busy_[this.cellKey(Number(c.day), s.slot)] = true;
+            });
+            c.location = '';
+            this.markDirty();
+        },
+
+        async saveAvailability() {
+            const a = this.avail;
+            a.busy = true; a.error = '';
+            try {
+                const blocks = Object.entries(a.cells).map(([k, state]) => {
+                    const [day, slot] = k.split('-').map(Number);
+                    return { day, slot, state };
+                });
+                const res = await fetch(`${API_BASE_URL}/professors/${a.professorId}/availability`, {
+                    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        academicYear: a.year, maxTeachingDays: a.maxDays === '' ? null : Number(a.maxDays),
+                        notes: a.notes, blocks, commitments: a.commitments
+                    })
+                });
+                const data = await res.json();
+                if (!res.ok) { a.error = data.error || 'Salvarea a eșuat.'; return; }
+                a.dirty = false; a.saved = true;
+                await this.loadAvailability();
+                a.saved = true;
+            } catch (e) { a.error = 'Nu s-a putut contacta serverul.'; }
+            finally { a.busy = false; }
+        },
+
+        async parseAvailabilityText() {
+            const a = this.avail;
+            a.parsing = true; a.error = ''; a.warnings = [];
+            try {
+                const res = await fetch(`${API_BASE_URL}/professors/${a.professorId}/availability/parse`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: a.text })
+                });
+                const data = await res.json();
+                if (!res.ok) { a.error = data.error || 'Interpretarea a eșuat.'; return; }
+                // propunerea înlocuiește marcajele; celulele ocupate extern rămân blocate de angajamente
+                const cells = {};
+                data.blocks.forEach(b => { if (!this.isBusy(b.day, b.slot)) cells[this.cellKey(b.day, b.slot)] = b.state; });
+                a.cells = cells;
+                if (data.maxTeachingDays) a.maxDays = data.maxTeachingDays;
+                a.warnings = data.warnings;
+                a.parseSource = data.source;
+                this.markDirty();
+            } catch (e) { a.error = 'Nu s-a putut contacta serverul.'; }
+            finally { a.parsing = false; }
         },
 
         onImportFile(event) {

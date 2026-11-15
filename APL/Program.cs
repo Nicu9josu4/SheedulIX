@@ -12,6 +12,8 @@ builder.Services.AddScoped<AcademicService>();
 builder.Services.AddScoped<WorkloadService>();
 builder.Services.AddScoped<WorkloadModelService>();
 builder.Services.AddScoped<ImportService>();
+builder.Services.AddScoped<AvailabilityService>();
+builder.Services.AddScoped<AvailabilityParser>();
 builder.Services.AddScoped<StaffingPlanService>();
 builder.Services.AddControllers(o => o.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true)
     .AddJsonOptions(o => o.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles);

@@ -58,6 +58,75 @@ namespace AcademicManagement.Migrations
                     b.ToTable("ApprovalSteps", (string)null);
                 });
 
+            modelBuilder.Entity("AcademicManagement.Domain.AvailabilityBlock", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AcademicYear")
+                        .IsRequired()
+                        .HasMaxLength(9)
+                        .HasColumnType("character varying(9)");
+
+                    b.Property<int>("DayOfWeek")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("ProfessorProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SlotNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProfessorProfileId", "AcademicYear", "DayOfWeek", "SlotNumber")
+                        .IsUnique();
+
+                    b.ToTable("AvailabilityBlocks", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_AvailabilityBlocks_Day", "\"DayOfWeek\" BETWEEN 1 AND 6");
+                        });
+                });
+
+            modelBuilder.Entity("AcademicManagement.Domain.AvailabilityPreference", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AcademicYear")
+                        .IsRequired()
+                        .HasMaxLength(9)
+                        .HasColumnType("character varying(9)");
+
+                    b.Property<int?>("MaxTeachingDays")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Notes")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<Guid>("ProfessorProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProfessorProfileId", "AcademicYear")
+                        .IsUnique();
+
+                    b.ToTable("AvailabilityPreferences", (string)null);
+                });
+
             modelBuilder.Entity("AcademicManagement.Domain.Contract", b =>
                 {
                     b.Property<Guid>("Id")
@@ -309,6 +378,44 @@ namespace AcademicManagement.Migrations
                     b.HasIndex("PersonId");
 
                     b.ToTable("EmploymentDocuments", (string)null);
+                });
+
+            modelBuilder.Entity("AcademicManagement.Domain.ExternalCommitment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AcademicYear")
+                        .IsRequired()
+                        .HasMaxLength(9)
+                        .HasColumnType("character varying(9)");
+
+                    b.Property<int>("DayOfWeek")
+                        .HasColumnType("integer");
+
+                    b.Property<TimeSpan>("EndTime")
+                        .HasColumnType("interval");
+
+                    b.Property<string>("Location")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("ProfessorProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<TimeSpan>("StartTime")
+                        .HasColumnType("interval");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProfessorProfileId");
+
+                    b.ToTable("ExternalCommitments", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ExternalCommitments_Day", "\"DayOfWeek\" BETWEEN 1 AND 6");
+                        });
                 });
 
             modelBuilder.Entity("AcademicManagement.Domain.Group", b =>
@@ -663,6 +770,62 @@ namespace AcademicManagement.Migrations
                         });
                 });
 
+            modelBuilder.Entity("AcademicManagement.Domain.TimeSlot", b =>
+                {
+                    b.Property<int>("SlotNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<TimeSpan>("EndTime")
+                        .HasColumnType("interval");
+
+                    b.Property<bool>("IsLunchBreak")
+                        .HasColumnType("boolean");
+
+                    b.Property<TimeSpan>("StartTime")
+                        .HasColumnType("interval");
+
+                    b.HasKey("SlotNumber");
+
+                    b.ToTable("TimeSlots", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            SlotNumber = 1,
+                            EndTime = new TimeSpan(0, 9, 30, 0, 0),
+                            IsLunchBreak = false,
+                            StartTime = new TimeSpan(0, 8, 0, 0, 0)
+                        },
+                        new
+                        {
+                            SlotNumber = 2,
+                            EndTime = new TimeSpan(0, 11, 15, 0, 0),
+                            IsLunchBreak = false,
+                            StartTime = new TimeSpan(0, 9, 45, 0, 0)
+                        },
+                        new
+                        {
+                            SlotNumber = 3,
+                            EndTime = new TimeSpan(0, 13, 0, 0, 0),
+                            IsLunchBreak = false,
+                            StartTime = new TimeSpan(0, 11, 30, 0, 0)
+                        },
+                        new
+                        {
+                            SlotNumber = 4,
+                            EndTime = new TimeSpan(0, 14, 30, 0, 0),
+                            IsLunchBreak = true,
+                            StartTime = new TimeSpan(0, 13, 0, 0, 0)
+                        },
+                        new
+                        {
+                            SlotNumber = 5,
+                            EndTime = new TimeSpan(0, 16, 0, 0, 0),
+                            IsLunchBreak = false,
+                            StartTime = new TimeSpan(0, 14, 30, 0, 0)
+                        });
+                });
+
             modelBuilder.Entity("AcademicManagement.Domain.WorkloadModel", b =>
                 {
                     b.Property<Guid>("Id")
@@ -704,6 +867,28 @@ namespace AcademicManagement.Migrations
                         .IsRequired();
 
                     b.Navigation("StaffingPlan");
+                });
+
+            modelBuilder.Entity("AcademicManagement.Domain.AvailabilityBlock", b =>
+                {
+                    b.HasOne("AcademicManagement.Domain.ProfessorProfile", "ProfessorProfile")
+                        .WithMany()
+                        .HasForeignKey("ProfessorProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ProfessorProfile");
+                });
+
+            modelBuilder.Entity("AcademicManagement.Domain.AvailabilityPreference", b =>
+                {
+                    b.HasOne("AcademicManagement.Domain.ProfessorProfile", "ProfessorProfile")
+                        .WithMany()
+                        .HasForeignKey("ProfessorProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ProfessorProfile");
                 });
 
             modelBuilder.Entity("AcademicManagement.Domain.Contract", b =>
@@ -801,6 +986,17 @@ namespace AcademicManagement.Migrations
                     b.Navigation("Contract");
 
                     b.Navigation("Person");
+                });
+
+            modelBuilder.Entity("AcademicManagement.Domain.ExternalCommitment", b =>
+                {
+                    b.HasOne("AcademicManagement.Domain.ProfessorProfile", "ProfessorProfile")
+                        .WithMany()
+                        .HasForeignKey("ProfessorProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ProfessorProfile");
                 });
 
             modelBuilder.Entity("AcademicManagement.Domain.Group", b =>
