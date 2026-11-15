@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ajutor — SchedulIX</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+  <style>
+    :root { --ink:#1e293b; --muted:#64748b; --line:#e2e8f0; --brand:#4f46e5; --bg:#f1f5f9; --card:#ffffff; --code:#f1f5f9; }
+    @media (prefers-color-scheme: dark) {
+      :root { --ink:#e2e8f0; --muted:#94a3b8; --line:#334155; --brand:#818cf8; --bg:#0f172a; --card:#1e293b; --code:#0f172a; }
+    }
+    * { box-sizing: border-box; }
+    body { margin:0; font:15px/1.65 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color:var(--ink); background:var(--bg); }
+    header { background:#0f172a; color:#fff; padding:12px 24px; display:flex; align-items:center; gap:24px; flex-wrap:wrap; }
+    header a.brand { color:#fff; font-weight:700; text-decoration:none; font-size:17px; }
+    header nav { display:flex; gap:8px; }
+    header nav button { background:transparent; color:#cbd5e1; border:1px solid #334155; border-radius:6px; padding:6px 14px; cursor:pointer; font:inherit; }
+    header nav button.active { background:var(--brand); color:#fff; border-color:var(--brand); }
+    header .back { margin-left:auto; color:#cbd5e1; text-decoration:none; font-size:14px; }
+    .layout { display:grid; grid-template-columns:260px minmax(0, 1fr); gap:24px; max-width:1200px; margin:24px auto; padding:0 16px; }
+    aside { position:sticky; top:16px; align-self:start; max-height:calc(100vh - 32px); overflow:auto; background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px 16px; font-size:14px; }
+    aside h4 { margin:0 0 8px; font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
+    aside a { display:block; padding:4px 0; color:var(--ink); text-decoration:none; }
+    aside a:hover { color:var(--brand); }
+    main { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:28px 36px; min-width:0; }
+    main h1 { font-size:28px; margin-top:0; }
+    main h2 { font-size:21px; margin-top:34px; padding-bottom:6px; border-bottom:1px solid var(--line); scroll-margin-top:16px; }
+    main h3 { font-size:17px; margin-top:24px; scroll-margin-top:16px; }
+    main a { color:var(--brand); }
+    main table { border-collapse:collapse; width:100%; margin:14px 0; font-size:14px; display:block; overflow-x:auto; }
+    main th, main td { border:1px solid var(--line); padding:6px 10px; text-align:left; vertical-align:top; }
+    main th { background:var(--code); }
+    main code { background:var(--code); padding:1px 5px; border-radius:4px; font-size:.92em; }
+    main pre { background:var(--code); padding:14px 16px; border-radius:8px; overflow:auto; }
+    main pre code { background:transparent; padding:0; }
+    main blockquote { margin:14px 0; padding:8px 16px; border-left:4px solid var(--brand); background:var(--code); border-radius:0 8px 8px 0; color:var(--muted); }
+    main hr { border:0; border-top:1px solid var(--line); margin:24px 0; }
+    @media (max-width: 860px) { .layout { grid-template-columns:1fr; } aside { position:static; max-height:none; } main { padding:20px; } }
+  </style>
+</head>
+<body>
+  <header>
+    <a class="brand" href="/help.html">SchedulIX · Ajutor</a>
+    <nav>
+      <button id="btn-ghid" onclick="show('ghid')">Ghid de utilizare</button>
+      <button id="btn-tehnica" onclick="show('tehnica')">Documentație tehnică</button>
+    </nav>
+    <a class="back" href="/">← Înapoi la aplicație</a>
+  </header>
+
+  <div class="layout">
+    <aside><h4>Cuprins</h4><div id="toc"></div></aside>
+    <main id="content">Se încarcă...</main>
+  </div>
+
+  <script>
+    const DOCS = { ghid: '/docs/GHID_UTILIZARE.md', tehnica: '/docs/DOCUMENTATIE_TEHNICA.md' };
+    const slug = t => t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+    async function show(key, anchor) {
+      if (!DOCS[key]) key = 'ghid';
+      document.getElementById('btn-ghid').classList.toggle('active', key === 'ghid');
+      document.getElementById('btn-tehnica').classList.toggle('active', key === 'tehnica');
+      history.replaceState(null, '', '#' + key + (anchor ? ':' + anchor : ''));
+      const content = document.getElementById('content');
+      try {
+        const res = await fetch(DOCS[key]);
+        if (!res.ok) throw new Error(res.status);
+        content.innerHTML = DOMPurify.sanitize(marked.parse(await res.text()));
+      } catch (e) {
+        content.textContent = 'Documentul nu a putut fi încărcat.';
+        return;
+      }
+      const toc = document.getElementById('toc');
+      toc.innerHTML = '';
+      content.querySelectorAll('h2, h3').forEach(h => {
+        h.id = slug(h.textContent);
+        if (h.tagName === 'H2') {
+          const a = document.createElement('a');
+          a.textContent = h.textContent; a.href = '#' + key + ':' + h.id;
+          a.onclick = ev => { ev.preventDefault(); h.scrollIntoView(); history.replaceState(null, '', a.getAttribute('href')); };
+          toc.appendChild(a);
+        }
+      });
+      // linkurile dintre documente (…md) comută documentul, nu deschid fișierul
+      content.querySelectorAll('a[href$=".md"]').forEach(a => {
+        const target = a.getAttribute('href').includes('TEHNICA') ? 'tehnica' : 'ghid';
+        a.onclick = ev => { ev.preventDefault(); show(target); window.scrollTo(0, 0); };
+      });
+      if (anchor) document.getElementById(anchor)?.scrollIntoView(); else window.scrollTo(0, 0);
+    }
+
+    const [k, a] = location.hash.replace('#', '').split(':');
+    show(k || 'ghid', a);
+  </script>
+</body>
+</html>

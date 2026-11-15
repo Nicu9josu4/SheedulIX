@@ -1,0 +1,18 @@
+# PostgreSQL pentru dezvoltare locală (baza APL, utilizator postgres).
+# Pornire:  docker compose up -d      Oprire:  docker compose down
+# Datele sunt păstrate în volumul "postgres_data". Parola este doar pentru dezvoltare.
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: APL
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

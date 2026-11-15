@@ -1,5 +1,7 @@
 # Academic Management (APL) — Managementul sarcinii didactice
 
+> Documentație completă: [Ghid de utilizare](wwwroot/docs/GHID_UTILIZARE.md) · [Documentație tehnică](wwwroot/docs/DOCUMENTATIE_TEHNICA.md) (și în aplicație, la meniul **Ajutor**).
+
 API .NET 10 + PostgreSQL pentru:
 
 1. **Calculul și repartizarea normelor didactice** — ore de curs, seminar și laborator pe cadru didactic, cu verificarea încadrării în limitele configurate.
@@ -8,7 +10,7 @@ API .NET 10 + PostgreSQL pentru:
 ## Pornire
 
 ```bash
-docker compose -f ../postgres-compose.yml up -d   # PostgreSQL pe localhost:5432
+docker compose up -d                              # (din rădăcina repo-ului) PostgreSQL pe localhost:5432
 dotnet ef database update                         # creează baza APL din migrări
 dotnet run
 ```

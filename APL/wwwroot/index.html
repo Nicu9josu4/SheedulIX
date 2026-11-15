@@ -55,6 +55,9 @@
                 <button @click="currentTab = 'timetable'; loadTimetable()" :class="currentTab === 'timetable' ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800 hover:text-white'" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition">
                     <i class="fa-solid fa-table-cells w-5"></i><span>Orar</span>
                 </button>
+                <a href="/help.html" target="_blank" rel="noopener" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition hover:bg-slate-800 hover:text-white">
+                    <i class="fa-solid fa-circle-question w-5"></i><span>Ajutor</span>
+                </a>
                 <button @click="currentTab = 'availability'" :class="currentTab === 'availability' ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800 hover:text-white'" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition">
                     <i class="fa-solid fa-calendar-check w-5"></i><span>Disponibilitate</span>
                 </button>
