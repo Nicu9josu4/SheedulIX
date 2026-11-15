@@ -51,7 +51,7 @@ Modulele aplicației:
 ```
 APL/
 ├── Controllers/        AcademicControllers, WorkloadController, AvailabilityController,
-│                       TimetableController, ImportController
+│                       TimetableController, ImportController, CatalogController
 ├── Services/           AcademicService, WorkloadService, WorkloadModelService, StaffingPlanService,
 │                       AvailabilityService, AvailabilityParser, TimetableService,
 │                       TimetableExportService, ImportService
@@ -147,7 +147,7 @@ Cheile primare sunt `Guid`, cu excepția `TimeSlot` (număr de pereche). Enum-ur
 | `TimetableEntry` | O pereche plasată: repartizare, zi, pereche, sală, paritate (`All` / `Odd` / `Even`) |
 | `TimetableUnplaced` | Perechi care nu au încăput, cu motivul |
 
-Migrări: `InitialCreate`, `CurriculumEntryYear`, `WorkloadModelAnnualHours`, `Availability`, `Timetable`.
+Migrări: `InitialCreate`, `CurriculumEntryYear`, `WorkloadModelAnnualHours`, `Availability`, `Timetable`, `CatalogLanguages` (indice unic pe codul limbii și limbile implicite).
 
 ## 5. Reguli de business
 
@@ -230,14 +230,24 @@ Toate rutele au prefixul `/api`. Erorile de business: HTTP 400 `{ "error": "..."
 | Metodă | Rută | Rol |
 | --- | --- | --- |
 | GET, POST | `/departments` | Listă / adăugare departament |
+| PUT, DELETE | `/departments/{id}` | Editare / ștergere (refuzată dacă are angajări sau state) |
 | GET | `/persons/search?q=` | Căutare persoane |
 | POST | `/persons` | Persoană + angajare + profil de profesor |
+| PUT | `/persons/{id}` | Editarea persoanei și a angajării din departamentul indicat |
 | POST | `/persons/{id}/employments` | Angajare suplimentară (cumul) |
 | GET | `/professors` | Profesori cu angajări și limbi |
 | GET, POST | `/subjects` | Discipline |
-| GET | `/studyprograms`, `/curriculums`, `/languages` | Liste |
+| PUT, DELETE | `/subjects/{id}` | Editare / ștergere (refuzată dacă e în curriculum sau repartizări) |
+| GET, POST | `/studyprograms` | Programe de studii |
+| PUT, DELETE | `/studyprograms/{id}` | Editare / ștergere (refuzată dacă are curriculumuri sau grupe) |
+| GET, POST | `/curriculums` | Curriculumuri (cu disciplinele lor la GET); `version` în formatul `2026-2027` |
+| PUT, DELETE | `/curriculums/{id}` | Editare / ștergere (refuzată dacă are grupe) |
+| POST | `/curriculums/{id}/subjects` | Adaugă o disciplină în curriculum (an, semestru, ore curs/seminar/laborator) |
+| DELETE | `/curriculums/{id}/subjects/{entryId}` | Scoate disciplina din curriculum |
+| GET, POST | `/languages` | Limbi de instruire (codul este unic) |
 | GET | `/curriculums/resolve?studyProgramId=&entryYear=` | Ce curriculum primește o cohortă |
 | GET, POST | `/groups` | Grupe cu subgrupe |
+| PUT | `/groups/{id}` | Editare; curriculumul trebuie să aparțină programului; subgrupele se refac la trecerea peste 26 de studenți |
 | POST | `/groups/auto-create` | Grupă creată din cod (program, curriculum, subgrupe automate) |
 | POST | `/groups/{id}/subgroups/generate` | Regenerează subgrupele |
 | GET | `/dashboard/stats` | Cifre pentru panou |
@@ -247,6 +257,7 @@ Toate rutele au prefixul `/api`. Erorile de business: HTTP 400 `{ "error": "..."
 | --- | --- | --- |
 | POST | `/teachingassignments` | Salvează o repartizare (cu toate validările) |
 | POST | `/teachingassignments/check` | Verifică fără a salva: erori, normă, fezabilitate |
+| GET, PUT | `/professors/{id}/qualifications` | Disciplinele și limbile pe care le poate preda un profesor (PUT înlocuiește lista) |
 | GET, POST | `/workload-models` | Modele de calcul pe an |
 | GET | `/workload-models/{id}` | Model cu norme și coeficienți |
 | POST | `/workload-models/{id}/clone` · `/norms` · `/coefficients` · `/activate` · `/archive` | Gestionarea modelului |
@@ -290,17 +301,15 @@ Toate rutele au prefixul `/api`. Erorile de business: HTTP 400 `{ "error": "..."
 
 ## 7. Interfața web
 
-Un singur fișier `index.html` (Alpine.js) cu logica în `js/app.js`. Meniul: Dashboard, Departamente, Programe de Studii, Angajați / Profesori, Discipline, Curriculum, Grupe & Subgrupe, Sarcină Didactică, Import date, Orar, Disponibilitate. Ecranele noi (Import date, Orar, Disponibilitate, verificarea din Sarcină Didactică) sunt complet legate la API. Paginile `demo-tabler.html` și `demo-vue.html` sunt machete de stil, nelegate la restul aplicației.
+Un singur fișier `index.html` (Alpine.js) cu logica în `js/app.js`. Meniul: Dashboard, Departamente, Programe de Studii, Angajați / Profesori, Discipline, Curriculum, Grupe & Subgrupe, Sarcină Didactică, Import date, Orar, Calificări, Model de calcul, Disponibilitate, Ajutor. Toate ecranele sunt legate la API; formularele de adăugare și editare funcționează pentru departamente, programe, discipline, curriculumuri (cu disciplinele lor), persoane și grupe. Paginile `demo-tabler.html` și `demo-vue.html` sunt machete de stil, nelegate la restul aplicației.
 
 ## 8. Stare și limitări cunoscute
 
-**Funcții care nu au încă ecran sau endpoint (se fac direct în baza de date):**
-- crearea **programelor de studii**, a **curriculumurilor** și a disciplinelor dintr-un curriculum: formularele din interfață apelează rute care nu există în API;
-- introducerea **calificărilor** profesorilor (disciplinele și limbile pe care le pot preda): fără ele, o repartizare este refuzată;
-- crearea **limbilor** (RO, RU, EN): există doar listarea;
-- **editarea și ștergerea** din ecranele inițiale (departamente, programe, discipline, curriculum, persoane, grupe) apelează rute `PUT` / `DELETE` care nu există.
+**Funcții fără ecran (se fac prin API / Swagger):** contracte, documente, stat de funcții și fluxul de aprobare.
 
-**Funcții disponibile doar prin API (Swagger), fără ecran:** modelul de calcul (norme, coeficienți, activare), contracte, documente, stat de funcții și aprobare.
+**Ștergerea:** ecranele oferă adăugare și editare; ștergerea există în API (`DELETE`, refuzată dacă înregistrarea e folosită), dar nu are buton.
+
+**Date inițiale:** limbile RO, RU, EN sunt create de migrarea `CatalogLanguages` (fără a dubla pe cele existente). Restul datelor de referință (programe, curriculumuri, calificări, modelul de calcul) se introduc din ecrane sau din Excel.
 
 **Alte limitări:**
 - fără autentificare și roluri (director de departament, decan, resurse umane);
@@ -335,4 +344,5 @@ Un singur fișier `index.html` (Alpine.js) cu logica în `js/app.js`. Meniul: Da
 - **Enum-uri în JSON:** pentru text în loc de număr, adaugă `[JsonConverter(typeof(JsonStringEnumConverter))]` pe enum (cum fac `AvailabilityState`, `RoomType`, `WeekParity`). Nu activa global conversia, fiindcă frontend-ul vechi se bazează pe numere.
 - **Reguli noi de orar:** se adaugă în `TimetableService` ca restricții pe `CpModel` (obligatorii) sau termeni în obiectiv (moi).
 - **Erori de business:** aruncă `InvalidOperationException` cu un mesaj în română; controllerul îl transformă în HTTP 400.
+- **Atenție la `dotnet ef database drop`:** ignoră opțiunea `--connection` și șterge baza din `appsettings.json`. Pentru o bază temporară folosește `DROP DATABASE` din `psql`.
 - **Teste:** recomandat un proiect xUnit pentru `WorkloadService`, `AvailabilityParser.ParseWithRules`, `TimetableService.Pattern` și, cu o bază de test, `ImportService`.

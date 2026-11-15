@@ -473,6 +473,9 @@ namespace AcademicManagement.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Code")
+                        .IsUnique();
+
                     b.ToTable("Languages", (string)null);
                 });
 

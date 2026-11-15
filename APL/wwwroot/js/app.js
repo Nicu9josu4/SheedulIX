@@ -217,7 +217,9 @@ document.addEventListener('alpine:init', () => {
             'assignments': 'Repartizare Sarcină Didactică',
             'import': 'Import date din Excel',
             'availability': 'Disponibilitate cadre didactice',
-            'timetable': 'Orar'
+            'timetable': 'Orar',
+            'qualifications': 'Calificări profesori',
+            'workload': 'Model de calcul al normei'
         },
 
         // Date Nomenclatoare
@@ -247,6 +249,15 @@ document.addEventListener('alpine:init', () => {
         importReport: null,
         importBusy: false,
         importError: '',
+
+        // Calificări
+        qual: { professorId: '', loaded: false, busy: false, dirty: false, saved: false, error: '', filter: '', subjectIds: [], languageIds: [] },
+
+        // Model de calcul
+        wl: {
+            models: [], selectedId: '', detail: null, error: '', newYear: '2027-2028',
+            norm: { position: '', min: 400, base: 450, max: 500 }, coef: { type: 0, value: 1 }
+        },
 
         // Orar
         tt: {
@@ -321,6 +332,92 @@ document.addEventListener('alpine:init', () => {
             academicYear: '2026-2027'
         },
         assignCheck: null,
+
+        // ===== Calificări =====
+        qualSubjects() {
+            const f = this.qual.filter.trim().toLowerCase();
+            return this.subjects.filter(s => !f || s.name.toLowerCase().includes(f) || (s.code || '').toLowerCase().includes(f));
+        },
+        qualSelectShown(on) {
+            const shown = this.qualSubjects().map(s => s.id);
+            const rest = this.qual.subjectIds.filter(id => !shown.includes(id));
+            this.qual.subjectIds = on ? [...rest, ...shown] : rest;
+            this.qual.dirty = true; this.qual.saved = false;
+        },
+        async loadQualifications() {
+            const q = this.qual;
+            q.error = ''; q.loaded = false;
+            if (!q.professorId) return;
+            const res = await fetch(`${API_BASE_URL}/professors/${q.professorId}/qualifications`);
+            const data = await res.json();
+            if (!res.ok) { q.error = data.error || 'Nu s-au putut încărca calificările.'; return; }
+            q.subjectIds = data.subjectIds; q.languageIds = data.languageIds;
+            q.dirty = false; q.saved = false; q.loaded = true;
+        },
+        async saveQualifications() {
+            const q = this.qual;
+            q.busy = true; q.error = '';
+            try {
+                const res = await fetch(`${API_BASE_URL}/professors/${q.professorId}/qualifications`, {
+                    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ subjectIds: q.subjectIds, languageIds: q.languageIds })
+                });
+                const data = await res.json();
+                if (!res.ok) { q.error = data.error || 'Salvarea a eșuat.'; return; }
+                q.dirty = false; q.saved = true;
+            } catch (e) { q.error = 'Nu s-a putut contacta serverul.'; }
+            finally { q.busy = false; }
+        },
+
+        // ===== Model de calcul =====
+        wlIsDraft() { const s = this.wl.detail && this.wl.detail.status; return s === 0 || s === 'Draft'; },
+        wlIsActive() { const s = this.wl.detail && this.wl.detail.status; return s === 1 || s === 'Active'; },
+        wlPositions() { return [...new Set(this.professors.flatMap(p => (p.employments || []).map(e => e.position)).filter(Boolean))].sort(); },
+        async wlCall(path, method, body) {
+            this.wl.error = '';
+            const res = await fetch(`${API_BASE_URL}${path}`, {
+                method, headers: { 'Content-Type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body)
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) { this.wl.error = data.error || 'Operația a eșuat.'; return null; }
+            return data;
+        },
+        async loadWorkloadModels() {
+            const res = await fetch(`${API_BASE_URL}/workload-models`);
+            this.wl.models = res.ok ? await res.json() : [];
+            if (this.wl.selectedId) await this.selectWorkloadModel(this.wl.selectedId);
+        },
+        async selectWorkloadModel(id) {
+            this.wl.selectedId = id;
+            const res = await fetch(`${API_BASE_URL}/workload-models/${id}`);
+            this.wl.detail = res.ok ? await res.json() : null;
+        },
+        async createWorkloadModel() {
+            const m = await this.wlCall('/workload-models', 'POST', { academicYear: this.wl.newYear });
+            if (m) { await this.loadWorkloadModels(); await this.selectWorkloadModel(m.id); }
+        },
+        async cloneWorkloadModel() {
+            const m = await this.wlCall(`/workload-models/${this.wl.selectedId}/clone`, 'POST', { academicYear: this.wl.newYear });
+            if (m) { await this.loadWorkloadModels(); await this.selectWorkloadModel(m.id); }
+        },
+        async addWorkloadNorm() {
+            const n = this.wl.norm;
+            const r = await this.wlCall(`/workload-models/${this.wl.selectedId}/norms`, 'POST',
+                { position: n.position, minHours: Number(n.min), baseNormHours: Number(n.base), maxHours: Number(n.max) });
+            if (r) { n.position = ''; await this.selectWorkloadModel(this.wl.selectedId); }
+        },
+        async addWorkloadCoefficient() {
+            const c = this.wl.coef;
+            const r = await this.wlCall(`/workload-models/${this.wl.selectedId}/coefficients`, 'POST',
+                { activityType: Number(c.type), coefficient: Number(c.value) });
+            if (r) await this.selectWorkloadModel(this.wl.selectedId);
+        },
+        async activateWorkloadModel() {
+            if (await this.wlCall(`/workload-models/${this.wl.selectedId}/activate`, 'POST')) await this.loadWorkloadModels();
+        },
+        async archiveWorkloadModel() {
+            if (await this.wlCall(`/workload-models/${this.wl.selectedId}/archive`, 'POST')) await this.loadWorkloadModels();
+        },
 
         // ===== Orar =====
         // PDF pentru vizualizarea curentă: o singură grupă / un profesor / o sală dacă e aleasă, altfel toate de acel tip
@@ -587,6 +684,7 @@ document.addEventListener('alpine:init', () => {
                 const groupCodes = relatedGroups.length > 0 ? relatedGroups.map(g => g.code).join(', ') : (sp ? sp.code : 'N/A');
                 return {
                     id: c.id,
+                    studyProgramId: c.studyProgramId,
                     title: `${groupCodes} — An ${c.version}`,
                     version: c.version,
                     studyProgramName: sp ? sp.name : '',

@@ -208,7 +208,20 @@ public class AcademicApiController : ControllerBase
     [HttpGet("curriculums")]
     public async Task<IActionResult> GetCurriculums()
     {
-        return Ok(await _context.Curriculums.Where(c => c.IsActive).ToListAsync());
+        // cu disciplinele fiecărui curriculum, cum le așteaptă ecranul „Curriculum”
+        return Ok(await _context.Curriculums.Where(c => c.IsActive)
+            .OrderByDescending(c => c.CreatedAt)
+            .Select(c => new
+            {
+                c.Id, c.StudyProgramId, c.Version, c.IsActive, c.CreatedAt,
+                Subjects = c.Subjects
+                    .OrderBy(cs => cs.YearOfStudy).ThenBy(cs => cs.Semester).ThenBy(cs => cs.Subject.Name)
+                    .Select(cs => new
+                    {
+                        cs.Id, cs.SubjectId, SubjectName = cs.Subject.Name, cs.LanguageId, LanguageCode = cs.Language.Code,
+                        cs.YearOfStudy, cs.Semester, cs.LectureHours, cs.SeminarHours, cs.LabHours
+                    })
+            }).ToListAsync());
     }
 
     /// <summary>Ce curriculum primeste o cohorta care incepe in anul dat.</summary>

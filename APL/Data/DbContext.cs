@@ -152,6 +152,7 @@ public class AppDbContext : DbContext
     private static void ConfigureWorkload(ModelBuilder mb)
     {
         ConfigureAvailability(mb);
+        mb.Entity<Language>().HasIndex(l => l.Code).IsUnique();
 
         mb.Entity<TeachingAssignment>().Property(a => a.AcademicYear).HasMaxLength(9);
         mb.Entity<TeachingAssignment>().HasIndex(a => new { a.ProfessorProfileId, a.AcademicYear, a.Semester });

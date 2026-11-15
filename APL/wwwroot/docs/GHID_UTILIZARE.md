@@ -22,13 +22,15 @@ Deschide în browser adresa pe care ți-a dat-o administratorul (pentru o instal
 | --- | --- |
 | **Dashboard** | Cifre generale: angajați, titulari / cumul, grupe, ore repartizate |
 | **Departamente** | Lista și adăugarea departamentelor |
-| **Programe de Studii** | Programele de studii (vezi nota din secțiunea 12) |
+| **Programe de Studii** | Programele de studii (adăugare și editare) |
 | **Angajați / Profesori** | Cadrele didactice și angajările lor |
 | **Discipline** | Catalogul disciplinelor |
-| **Curriculum** | Planurile de învățământ (vezi secțiunea 12) |
+| **Curriculum** | Planurile de învățământ pe an de intrare, cu disciplinele lor |
 | **Grupe & Subgrupe** | Grupele de studenți și subgrupele lor |
 | **Sarcină Didactică** | Repartizarea orelor, cu verificare în timp real |
 | **Import date** | Încărcarea datelor dintr-un fișier Excel |
+| **Calificări** | Ce discipline și în ce limbi poate preda fiecare profesor |
+| **Model de calcul** | Normele și coeficienții anului universitar |
 | **Orar** | Generarea, vizualizarea și exportul orarului, plus sălile |
 | **Disponibilitate** | Zilele și orele în care poate preda fiecare profesor |
 
@@ -48,7 +50,24 @@ Deschide în browser adresa pe care ți-a dat-o administratorul (pentru o instal
 | 4 | **Orar** | Adaugi sălile și generezi orarul |
 | 5 | **Orar** | Exporți în Excel sau PDF |
 
-> **Înainte de prima utilizare** administratorul trebuie să pregătească: limbile (RO, RU, EN), programele de studii cu planurile lor, calificările profesorilor și modelul de calcul al anului (normele). Acestea nu au încă ecrane; vezi secțiunea 12.
+> **Înainte de prima repartizare** pregătește, în această ordine: programele de studii și curriculumurile lor (secțiunea 3.1), calificările profesorilor (secțiunea 3.2) și modelul de calcul al anului (secțiunea 3.3). Limbile RO, RU și EN există deja.
+
+### 3.1. Programe de studii, curriculumuri și grupe
+1. **Programe de Studii**: adaugi programul (cod, nume, nivel, durată).
+2. **Discipline**: adaugi disciplinele (sau le imporți din Excel).
+3. **Curriculum**: creezi un curriculum pentru program, cu **versiunea = anul de intrare** (de exemplu `2026-2027`), apoi adaugi disciplinele lui, cu limba, anul de studiu, semestrul (1 sau 2) și orele de curs, seminar și laborator.
+4. **Grupe & Subgrupe**: creezi grupa alegând programul, curriculumul și limba. Peste 26 de studenți se creează automat 2 subgrupe.
+
+Un curriculum cu grupe asociate nu poate fi șters (îl poți dezactiva), iar un program cu curriculumuri sau grupe nu poate fi șters.
+
+### 3.2. Calificările profesorilor
+În **Calificări** alegi profesorul, bifezi **limbile** în care poate preda și **disciplinele** (cu căutare după nume sau cod; „Bifează cele afișate” selectează toate disciplinele filtrate), apoi apeși **Salvează calificările**. Fără calificare, o repartizare este refuzată.
+
+### 3.3. Modelul de calcul al anului
+În **Model de calcul**:
+1. Scrii anul (de exemplu `2026-2027`) și apeși **Creează model gol**, sau alegi un model existent și apeși **Copiază modelul ales în acest an**.
+2. În modelul **Ciornă** adaugi **normele** pe funcție (minim, normă de bază, maxim, în ore convenționale pe an; funcția se scrie ca în lista cadrelor, de exemplu „Lector universitar”) și **coeficienții** pentru curs, seminar și laborator.
+3. Apeși **Activează modelul**. Activarea îl blochează și cere câte un coeficient pentru fiecare tip de activitate și cel puțin o normă. Valorile vin din regulamentul universității.
 
 ## 4. Importul datelor din Excel
 
@@ -195,11 +214,11 @@ Aceste funcții există, dar **nu au încă ecran**. Se folosesc din **Swagger**
 
 | Mesaj / situație | Cauză | Ce faci |
 | --- | --- | --- |
-| „Profesorul nu este calificat pentru această disciplină” | Nu are disciplina în lista de calificări | Cere administratorului să adauge calificarea |
-| „Profesorul nu este autorizat să predea în această limbă” | Limba nu e în lista profesorului | Idem |
+| „Profesorul nu este calificat pentru această disciplină” | Nu are disciplina în lista de calificări | Adaug-o în **Calificări** (secțiunea 3.2) |
+| „Profesorul nu este autorizat să predea în această limbă” | Limba nu e în lista profesorului | Bifeaz-o în **Calificări** |
 | „Disciplina cu această limbă nu există în curriculumul grupei” | Disciplina nu e în planul grupei | Verifică grupa, limba și curriculumul |
 | „Norma depășește limita maximă” | Suma orelor convenționale depășește maximul funcției | Redu orele sau repartizează altui profesor |
-| „Nu există model de calcul pentru 2026-2027” / „normă neconfigurată” | Modelul anului nu e creat sau nu are funcția respectivă | Administratorul creează și activează modelul (secțiunea 12) |
+| „Nu există model de calcul pentru 2026-2027” / „normă neconfigurată” | Modelul anului nu e creat sau nu are funcția respectivă | Creează și activează modelul în **Model de calcul** (secțiunea 3.3) |
 | „Nu există nicio sală activă” la generare | Nu ai adăugat săli | Adaugă săli în **Orar** |
 | „Nu există repartizări pentru acest an și semestru” | Nimic repartizat în semestrul ales | Repartizează ore în **Sarcină Didactică** |
 | Import: „Departamentul «…» nu există” | Cadrul trimite la un cod de departament inexistent | Adaugă departamentul în foaia **Departamente** |
@@ -213,13 +232,8 @@ Aceste funcții există, dar **nu au încă ecran**. Se folosesc din **Swagger**
 - Generează orarul de mai multe ori dacă schimbi datele: fiecare generare înlocuiește pe cea precedentă a aceluiași semestru. Exportă înainte dacă vrei să păstrezi o variantă.
 - Păstrează o copie a fișierului Excel de import folosit; îl poți reîncărca oricând fără să dublezi datele.
 
-## 12. Ce trebuie pregătit de administrator (deocamdată fără ecran)
+## 12. Ce nu are încă ecran
 
-Aceste elemente se introduc momentan direct în baza de date (sau prin API), de către administrator. Fără ele, partea de repartizare nu poate funcționa:
-
-1. **Limbile** de instruire (RO, RU, EN).
-2. **Programele de studii** și **curriculumurile** lor, cu disciplinele fiecărui curriculum (ore de curs, seminar, laborator pe an și semestru). Formularele din ecranele „Programe de Studii” și „Curriculum” nu salvează încă.
-3. **Calificările profesorilor**: disciplinele și limbile pe care le poate preda fiecare.
-4. **Modelul de calcul al anului**: norme (minim, normă de bază, maxim) pe funcție și coeficienți pe tip de activitate, apoi **activat**. Se face prin API (`/api/workload-models`, vezi Swagger). Valorile vin din regulamentul universității.
-
-În plus, **editarea și ștergerea** din ecranele inițiale (departamente, discipline, persoane, grupe) nu funcționează încă; adăugarea funcționează.
+- **Contracte, documente și state de funcții** (secțiunea 8) se fac din Swagger.
+- **Ștergerea** înregistrărilor nu are buton în ecrane; adăugarea și editarea funcționează.
+- **Autentificarea și rolurile** (director de departament, decan, resurse umane) nu sunt implementate: oricine are adresa aplicației poate modifica datele.
