@@ -7,10 +7,12 @@ namespace AcademicManagement.Services;
 public class AcademicService
 {
     private readonly AppDbContext _context;
+    private readonly WorkloadService _workload;
 
-    public AcademicService(AppDbContext context)
+    public AcademicService(AppDbContext context, WorkloadService workload)
     {
         _context = context;
+        _workload = workload;
     }
 
     /// <summary>
@@ -44,6 +46,13 @@ public class AcademicService
     /// </summary>
     public async Task AssignProfessorAsync(TeachingAssignment assignment)
     {
+        if (assignment.Hours <= 0)
+            throw new InvalidOperationException("Numărul de ore trebuie să fie pozitiv.");
+        if (string.IsNullOrWhiteSpace(assignment.AcademicYear))
+            throw new InvalidOperationException("Anul universitar este obligatoriu (ex: 2026-2027).");
+        if (assignment.Semester is < 1 or > 2)
+            throw new InvalidOperationException("Semestrul trebuie să fie 1 sau 2.");
+
         // 1. Rule: Lectures cannot be assigned to subgroups
         if (assignment.ActivityType == ActivityType.Lecture && assignment.SubgroupId.HasValue)
         {
@@ -81,6 +90,9 @@ public class AcademicService
         {
             throw new InvalidOperationException("Subject/Language combination is not present in group's curriculum.");
         }
+
+        // 5. Rule: sarcina totala a profesorului trebuie sa ramana in limitele normei / contractului
+        await _workload.EnsureWithinLimitsAsync(assignment);
 
         _context.TeachingAssignments.Add(assignment);
         await _context.SaveChangesAsync();

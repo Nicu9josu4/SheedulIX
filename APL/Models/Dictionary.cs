@@ -175,7 +175,8 @@ public class TeachingAssignment
     public Guid LanguageId { get; set; }
     public Language Language { get; set; } = null!;
     public ActivityType ActivityType { get; set; }
-    public int Hours { get; set; }
+    public int Hours { get; set; } // ore totale pe semestru
     public int Semester { get; set; }
+    public string AcademicYear { get; set; } = string.Empty; // ex: 2026-2027
     public AssignmentStatus Status { get; set; } = AssignmentStatus.Assigned;
 }
