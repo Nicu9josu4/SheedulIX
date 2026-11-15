@@ -1,4 +1,4 @@
-﻿using AcademicManagement.Data;
+using AcademicManagement.Data;
 using AcademicManagement.Domain;
 using Microsoft.EntityFrameworkCore;
 
@@ -39,6 +39,33 @@ public class AcademicService
         }
 
         await _context.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Regula de atribuire a curriculumului: cohorta care incepe studiile in anul X primeste curriculumul
+    /// activ al programului cu versiunea X-Y; daca nu exista, primeste ultimul curriculum creat al programului.
+    /// </summary>
+    public async Task<(Curriculum? Curriculum, bool UsedFallback)> ResolveCurriculumAsync(Guid studyProgramId, int entryYear)
+    {
+        var active = await _context.Curriculums
+            .Where(c => c.StudyProgramId == studyProgramId && c.IsActive)
+            .ToListAsync();
+
+        var exact = active
+            .Where(c => StartYear(c.Version) == entryYear)
+            .OrderByDescending(c => c.CreatedAt)
+            .FirstOrDefault();
+        if (exact is not null) return (exact, false);
+
+        var latest = active.OrderByDescending(c => c.CreatedAt).FirstOrDefault();
+        return (latest, latest is not null);
+    }
+
+    /// <summary>"2026-2027" → 2026; null daca versiunea nu incepe cu un an.</summary>
+    private static int? StartYear(string version)
+    {
+        var m = System.Text.RegularExpressions.Regex.Match(version ?? "", @"(20\d{2})");
+        return m.Success ? int.Parse(m.Groups[1].Value) : null;
     }
 
     /// <summary>

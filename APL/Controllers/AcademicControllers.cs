@@ -1,4 +1,4 @@
-﻿using AcademicManagement.Data;
+using AcademicManagement.Data;
 using AcademicManagement.Domain;
 using AcademicManagement.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -211,6 +211,16 @@ public class AcademicApiController : ControllerBase
         return Ok(await _context.Curriculums.Where(c => c.IsActive).ToListAsync());
     }
 
+    /// <summary>Ce curriculum primeste o cohorta care incepe in anul dat.</summary>
+    [HttpGet("curriculums/resolve")]
+    public async Task<IActionResult> ResolveCurriculum([FromQuery] Guid studyProgramId, [FromQuery] int entryYear)
+    {
+        var (curriculum, usedFallback) = await _academicService.ResolveCurriculumAsync(studyProgramId, entryYear);
+        return curriculum is null
+            ? NotFound(new { Error = "Programul nu are niciun curriculum activ." })
+            : Ok(new { curriculum.Id, curriculum.Version, UsedFallback = usedFallback });
+    }
+
     [HttpGet("languages")]
     public async Task<IActionResult> GetLanguages()
     {
@@ -234,13 +244,13 @@ public class AcademicApiController : ControllerBase
         if (program == null)
             return NotFound($"Programul de studii cu codul '{programCode}' nu a fost găsit.");
 
-        // 3. Caută Curriculum-ul aferent anului (ex: "2026" sau "2026-2027")
-        var curriculum = await _context.Curriculums
-            .FirstOrDefaultAsync(c => c.StudyProgramId == program.Id
-                                   && c.Version.Contains($"20{yearDigits}")
-                                   && c.IsActive);
+        // 3. Curriculumul anului de intrare; daca nu exista, ultimul curriculum creat al programului
+        if (!int.TryParse(yearDigits, out var yy))
+            return BadRequest("Codul grupei trebuie să conțină anul de intrare (ex: CR-261FR).");
+        int entryYear = 2000 + yy;
+        var (curriculum, usedFallback) = await _academicService.ResolveCurriculumAsync(program.Id, entryYear);
         if (curriculum == null)
-            return NotFound($"Nu s-a găsit niciun Curriculum activ pentru anul 20{yearDigits} la programul {programCode}.");
+            return NotFound($"Programul {programCode} nu are niciun Curriculum activ.");
 
         // 4. Creează grupa complet legată
         var group = new Group
@@ -252,6 +262,7 @@ public class AcademicApiController : ControllerBase
             LanguageId = dto.LanguageId,
             YearOfStudy = dto.YearOfStudy,
             StudentCount = dto.StudentCount,
+            EntryYear = entryYear,
         };
 
         _context.Groups.Add(group);
@@ -265,7 +276,10 @@ public class AcademicApiController : ControllerBase
 
         return Ok(new
         {
-            Message = $"Grupa {group.Code} a fost creată și asociată automat la Programul {program.Name} și Curriculumul {curriculum.Version}",
+            Message = usedFallback
+                ? $"Grupa {group.Code} a fost creată la Programul {program.Name}. Nu există curriculum pentru {entryYear}, s-a atribuit ultimul creat: {curriculum.Version}."
+                : $"Grupa {group.Code} a fost creată la Programul {program.Name} cu Curriculumul {curriculum.Version}.",
+            CurriculumFallback = usedFallback,
             Group = group
         });
     }

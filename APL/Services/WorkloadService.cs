@@ -8,32 +8,30 @@ public record WorkloadResult(
     Guid ProfessorProfileId,
     string FullName,
     string AcademicYear,
-    int Semester,
     string? Position,
     EmploymentType? EmploymentType,
     int AssignedPhysicalHours,
-    decimal ConventionalHoursPerWeek,
+    decimal ConventionalHoursSemester1,
+    decimal ConventionalHoursSemester2,
+    decimal ConventionalHoursYear,   // ore conventionale pe an universitar (ambele semestre)
     decimal? BaseNormHours,
     decimal? MinHours,
     decimal? MaxHours,
-    decimal? Delta,          // ore conventionale/saptamana fata de norma de baza (+ excedent, - deficit)
-    string Status,           // Ok | Deficit | Exceeded | NotConfigured
+    decimal? Delta,                  // fata de norma de baza (+ excedent, - deficit)
+    string Status,                   // Ok | Deficit | Exceeded | NotConfigured
     IReadOnlyList<string> Violations,
     IReadOnlyList<string> Warnings);
 
 /// <summary>
-/// Calculeaza norma didactica (ore conventionale) a unui cadru didactic si
-/// verifica incadrarea in limitele configurate. Valorile normelor si coeficientilor
-/// vin din baza de date (PositionNorms / ConversionCoefficients), nu din cod.
+/// Calculeaza sarcina didactica anuala (ore conventionale) a unui cadru si verifica incadrarea in limite.
+/// Normele si coeficientii vin din modelul de calcul al anului (WorkloadModel), nu din cod.
 /// </summary>
 public class WorkloadService(AppDbContext context)
 {
-    private const int DefaultWeeks = 14;
-
-    /// <param name="extraHours">Ore ipotetice de adaugat (ex. o repartizare noua inainte de salvare).</param>
+    /// <param name="extra">Repartizare ipotetica de adaugat (inainte de salvare).</param>
     public async Task<WorkloadResult> CalculateAsync(
-        Guid professorProfileId, string academicYear, int semester,
-        (ActivityType Type, int Hours)? extraHours = null)
+        Guid professorProfileId, string academicYear,
+        (ActivityType Type, int Hours, int Semester)? extra = null)
     {
         var profile = await context.ProfessorProfiles
             .Include(p => p.Person).ThenInclude(p => p.Employments)
@@ -48,24 +46,27 @@ public class WorkloadService(AppDbContext context)
                       ?? employments.FirstOrDefault();
         var isHead = primary?.EmploymentType == EmploymentType.Head;
 
-        var norm = primary is null ? null : await context.PositionNorms
-            .FirstOrDefaultAsync(n => n.Position == primary.Position && n.AcademicYear == academicYear);
+        var model = await context.WorkloadModels
+            .Include(m => m.Norms).Include(m => m.Coefficients)
+            .FirstOrDefaultAsync(m => m.AcademicYear == academicYear);
+        if (model is null)
+            warnings.Add($"Nu există model de calcul pentru {academicYear}.");
+        else if (model.Status == WorkloadModelStatus.Draft)
+            warnings.Add($"Modelul de calcul pentru {academicYear} nu este încă activat (ciornă).");
 
-        var coefficients = await context.ConversionCoefficients
-            .Where(c => c.AcademicYear == academicYear)
-            .ToDictionaryAsync(c => c.ActivityType, c => c.Coefficient);
+        var norm = primary is null ? null : model?.Norms.FirstOrDefault(n => n.Position == primary.Position);
+        var coefficients = model?.Coefficients.ToDictionary(c => c.ActivityType, c => c.Coefficient)
+                           ?? new Dictionary<ActivityType, decimal>();
 
-        var assignments = await context.TeachingAssignments
+        var rows = (await context.TeachingAssignments
             .Where(a => a.ProfessorProfileId == professorProfileId
                      && a.AcademicYear == academicYear
-                     && a.Semester == semester
                      && a.Status != AssignmentStatus.Cancelled
                      && a.Status != AssignmentStatus.Archived)
-            .Select(a => new { a.ActivityType, a.Hours })
-            .ToListAsync();
-
-        var rows = assignments.Select(a => (a.ActivityType, a.Hours)).ToList();
-        if (extraHours is { } extra) rows.Add(extra);
+            .Select(a => new { a.ActivityType, a.Hours, a.Semester })
+            .ToListAsync())
+            .Select(a => (a.ActivityType, a.Hours, a.Semester)).ToList();
+        if (extra is { } e) rows.Add(e);
 
         decimal Coef(ActivityType t)
         {
@@ -75,9 +76,9 @@ public class WorkloadService(AppDbContext context)
             return 1m;
         }
 
-        int weeks = norm?.WeeksPerSemester > 0 ? norm.WeeksPerSemester : DefaultWeeks;
+        decimal Conv(int semester) => rows.Where(r => r.Semester == semester).Sum(r => r.Hours * Coef(r.ActivityType));
+        decimal s1 = Conv(1), s2 = Conv(2), year = s1 + s2;
         int physical = rows.Sum(r => r.Hours);
-        decimal conventional = Math.Round(rows.Sum(r => r.Hours * Coef(r.ActivityType)) / weeks, 2);
 
         decimal? baseNorm = null, min = null, max = null;
         string status;
@@ -97,33 +98,33 @@ public class WorkloadService(AppDbContext context)
             else
             {
                 baseNorm = norm.BaseNormHours; min = norm.MinHours; max = norm.MaxHours;
-                if (conventional > max) violations.Add($"Norma depășește limita maximă ({conventional} > {max} ore conv./săpt.).");
-                status = conventional > max ? "Exceeded" : conventional < min ? "Deficit" : "Ok";
+                if (year > max) violations.Add($"Norma depășește limita maximă ({year} > {max} ore conv./an).");
+                status = year > max ? "Exceeded" : year < min ? "Deficit" : "Ok";
             }
         }
         else
         {
-            // Cumul: limita este data de contractele active in perioada anului universitar.
-            var contractHours = await ActiveContractHoursAsync(employments.Select(e => e.Id), academicYear);
+            // Cumul: limita este suma orelor conventionale ale contractelor active in anul universitar.
+            var contractHours = await ActiveContractHoursAsync(employments.Select(x => x.Id), academicYear);
             max = contractHours;
-            if (conventional > 0 && contractHours == 0)
+            if (year > 0 && contractHours == 0)
             {
                 violations.Add("Cadru în cumul fără contract activ: nu se pot repartiza ore.");
                 status = "Exceeded";
             }
-            else if (conventional > contractHours)
+            else if (year > contractHours)
             {
-                violations.Add($"Orele depășesc norma contractată ({conventional} > {contractHours} ore/săpt.).");
+                violations.Add($"Orele depășesc norma contractată ({year} > {contractHours} ore conv./an).");
                 status = "Exceeded";
             }
             else status = "Ok";
         }
 
         return new WorkloadResult(
-            professorProfileId, $"{profile.Person.LastName} {profile.Person.FirstName}",
-            academicYear, semester, primary?.Position, primary?.EmploymentType,
-            physical, conventional, baseNorm, min, max,
-            baseNorm.HasValue ? conventional - baseNorm.Value : null,
+            professorProfileId, $"{profile.Person.LastName} {profile.Person.FirstName}", academicYear,
+            primary?.Position, primary?.EmploymentType, physical,
+            Math.Round(s1, 2), Math.Round(s2, 2), Math.Round(year, 2),
+            baseNorm, min, max, baseNorm.HasValue ? Math.Round(year - baseNorm.Value, 2) : null,
             status, violations, warnings);
     }
 
@@ -131,8 +132,8 @@ public class WorkloadService(AppDbContext context)
     public async Task EnsureWithinLimitsAsync(TeachingAssignment assignment)
     {
         var result = await CalculateAsync(
-            assignment.ProfessorProfileId, assignment.AcademicYear, assignment.Semester,
-            (assignment.ActivityType, assignment.Hours));
+            assignment.ProfessorProfileId, assignment.AcademicYear,
+            (assignment.ActivityType, assignment.Hours, assignment.Semester));
         if (result.Violations.Count > 0)
             throw new InvalidOperationException(string.Join(" ", result.Violations));
     }
@@ -145,14 +146,14 @@ public class WorkloadService(AppDbContext context)
             .Where(c => ids.Contains(c.DepartmentEmploymentId)
                      && c.Status == ContractStatus.Active
                      && c.StartDate <= to && c.EndDate >= from)
-            .SumAsync(c => (decimal?)c.WeeklyHours) ?? 0m;
+            .SumAsync(c => (decimal?)c.AnnualHours) ?? 0m;
     }
 
     /// <summary>"2026-2027" → 1 sept. 2026 – 31 aug. 2027 (UTC).</summary>
     public static (DateTime From, DateTime To) AcademicYearRange(string academicYear)
     {
         var parts = academicYear.Split('-');
-        if (parts.Length != 2 || !int.TryParse(parts[0], out var y1) || !int.TryParse(parts[1], out var y2))
+        if (parts.Length != 2 || !int.TryParse(parts[0], out var y1) || !int.TryParse(parts[1], out var y2) || y2 != y1 + 1)
             throw new ArgumentException("Anul universitar trebuie să fie în formatul 2026-2027.", nameof(academicYear));
         return (new DateTime(y1, 9, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(y2, 8, 31, 0, 0, 0, DateTimeKind.Utc));
     }

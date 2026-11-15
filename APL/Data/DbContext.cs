@@ -1,4 +1,4 @@
-﻿using AcademicManagement.Domain;
+using AcademicManagement.Domain;
 using Microsoft.EntityFrameworkCore;
 using System.Reflection.Emit;
 
@@ -22,6 +22,7 @@ public class AppDbContext : DbContext
     public DbSet<TeachingAssignment> TeachingAssignments => Set<TeachingAssignment>();
 
     // Sarcina didactica, cumul si aprobare
+    public DbSet<WorkloadModel> WorkloadModels => Set<WorkloadModel>();
     public DbSet<PositionNorm> PositionNorms => Set<PositionNorm>();
     public DbSet<ConversionCoefficient> ConversionCoefficients => Set<ConversionCoefficient>();
     public DbSet<Contract> Contracts => Set<Contract>();
@@ -69,19 +70,29 @@ public class AppDbContext : DbContext
             t.HasCheckConstraint("CK_TeachingAssignments_Semester", "\"Semester\" IN (1, 2)");
         });
 
+        mb.Entity<WorkloadModel>().ToTable("WorkloadModels");
+        mb.Entity<WorkloadModel>().Property(m => m.AcademicYear).HasMaxLength(9);
+        mb.Entity<WorkloadModel>().Property(m => m.Name).HasMaxLength(200);
+        mb.Entity<WorkloadModel>().Property(m => m.Status).HasConversion<string>().HasMaxLength(20);
+        mb.Entity<WorkloadModel>().HasIndex(m => m.AcademicYear).IsUnique();
+
         mb.Entity<PositionNorm>().ToTable("PositionNorms");
+        mb.Entity<PositionNorm>()
+            .HasOne(n => n.WorkloadModel).WithMany(m => m.Norms)
+            .HasForeignKey(n => n.WorkloadModelId).OnDelete(DeleteBehavior.Cascade);
         mb.Entity<PositionNorm>().Property(n => n.Position).HasMaxLength(100);
-        mb.Entity<PositionNorm>().Property(n => n.AcademicYear).HasMaxLength(9);
-        mb.Entity<PositionNorm>().Property(n => n.BaseNormHours).HasPrecision(5, 2);
-        mb.Entity<PositionNorm>().Property(n => n.MinHours).HasPrecision(5, 2);
-        mb.Entity<PositionNorm>().Property(n => n.MaxHours).HasPrecision(5, 2);
-        mb.Entity<PositionNorm>().HasIndex(n => new { n.Position, n.AcademicYear }).IsUnique();
+        mb.Entity<PositionNorm>().Property(n => n.BaseNormHours).HasPrecision(7, 2);
+        mb.Entity<PositionNorm>().Property(n => n.MinHours).HasPrecision(7, 2);
+        mb.Entity<PositionNorm>().Property(n => n.MaxHours).HasPrecision(7, 2);
+        mb.Entity<PositionNorm>().HasIndex(n => new { n.WorkloadModelId, n.Position }).IsUnique();
 
         mb.Entity<ConversionCoefficient>().ToTable("ConversionCoefficients");
-        mb.Entity<ConversionCoefficient>().Property(c => c.AcademicYear).HasMaxLength(9);
+        mb.Entity<ConversionCoefficient>()
+            .HasOne(c => c.WorkloadModel).WithMany(m => m.Coefficients)
+            .HasForeignKey(c => c.WorkloadModelId).OnDelete(DeleteBehavior.Cascade);
         mb.Entity<ConversionCoefficient>().Property(c => c.ActivityType).HasConversion<string>().HasMaxLength(20);
         mb.Entity<ConversionCoefficient>().Property(c => c.Coefficient).HasPrecision(5, 3);
-        mb.Entity<ConversionCoefficient>().HasIndex(c => new { c.AcademicYear, c.ActivityType }).IsUnique();
+        mb.Entity<ConversionCoefficient>().HasIndex(c => new { c.WorkloadModelId, c.ActivityType }).IsUnique();
 
         mb.Entity<Contract>().ToTable("Contracts");
         mb.Entity<Contract>()
@@ -89,7 +100,7 @@ public class AppDbContext : DbContext
             .HasForeignKey(c => c.DepartmentEmploymentId).OnDelete(DeleteBehavior.Cascade);
         mb.Entity<Contract>().Property(c => c.Type).HasConversion<string>().HasMaxLength(20);
         mb.Entity<Contract>().Property(c => c.Status).HasConversion<string>().HasMaxLength(20);
-        mb.Entity<Contract>().Property(c => c.WeeklyHours).HasPrecision(5, 2);
+        mb.Entity<Contract>().Property(c => c.AnnualHours).HasPrecision(7, 2);
         mb.Entity<Contract>().HasIndex(c => c.Number).IsUnique();
         mb.Entity<Contract>().HasIndex(c => c.EndDate);
 

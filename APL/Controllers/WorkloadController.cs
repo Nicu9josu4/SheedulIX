@@ -8,57 +8,57 @@ namespace AcademicManagement.Controllers;
 
 [ApiController]
 [Route("api")]
-public class WorkloadController(AppDbContext context, WorkloadService workload, StaffingPlanService plans) : ControllerBase
+public class WorkloadController(AppDbContext context, WorkloadService workload, WorkloadModelService models, StaffingPlanService plans) : ControllerBase
 {
-    // ===== Configurare: norme si coeficienti =====
-    [HttpGet("position-norms")]
-    public async Task<IActionResult> GetNorms([FromQuery] string? academicYear) =>
-        Ok(await context.PositionNorms
-            .Where(n => academicYear == null || n.AcademicYear == academicYear)
-            .OrderBy(n => n.AcademicYear).ThenBy(n => n.Position).ToListAsync());
+    // ===== Modelul de calcul pe an: norme si coeficienti =====
+    [HttpGet("workload-models")]
+    public async Task<IActionResult> GetModels() =>
+        Ok(await context.WorkloadModels.OrderByDescending(m => m.AcademicYear).ToListAsync());
 
-    [HttpPost("position-norms")]
-    public async Task<IActionResult> CreateNorm([FromBody] PositionNorm norm)
+    [HttpGet("workload-models/{modelId:guid}")]
+    public async Task<IActionResult> GetModel(Guid modelId)
     {
-        if (string.IsNullOrWhiteSpace(norm.Position)) return BadRequest(new { Error = "Funcția este obligatorie." });
-        if (norm.MinHours > norm.BaseNormHours || norm.BaseNormHours > norm.MaxHours)
-            return BadRequest(new { Error = "Trebuie respectat: minim ≤ normă de bază ≤ maxim." });
-        try { WorkloadService.AcademicYearRange(norm.AcademicYear); }
-        catch (ArgumentException ex) { return BadRequest(new { Error = ex.Message }); }
-        if (await context.PositionNorms.AnyAsync(n => n.Position == norm.Position && n.AcademicYear == norm.AcademicYear))
-            return Conflict(new { Error = "Norma pentru această funcție și an există deja." });
-
-        context.PositionNorms.Add(norm);
-        await context.SaveChangesAsync();
-        return Ok(norm);
+        var model = await context.WorkloadModels
+            .Include(m => m.Norms).Include(m => m.Coefficients)
+            .FirstOrDefaultAsync(m => m.Id == modelId);
+        return model is null ? NotFound() : Ok(model);
     }
 
-    [HttpGet("conversion-coefficients")]
-    public async Task<IActionResult> GetCoefficients([FromQuery] string? academicYear) =>
-        Ok(await context.ConversionCoefficients
-            .Where(c => academicYear == null || c.AcademicYear == academicYear)
-            .OrderBy(c => c.AcademicYear).ThenBy(c => c.ActivityType).ToListAsync());
+    [HttpPost("workload-models")]
+    public Task<IActionResult> CreateModel([FromBody] CreateModelDto dto) =>
+        Run(() => models.CreateAsync(dto.AcademicYear, dto.Name));
 
-    [HttpPost("conversion-coefficients")]
-    public async Task<IActionResult> CreateCoefficient([FromBody] ConversionCoefficient coefficient)
+    [HttpPost("workload-models/{modelId:guid}/clone")]
+    public Task<IActionResult> CloneModel(Guid modelId, [FromBody] CreateModelDto dto) =>
+        Run(() => models.CloneAsync(modelId, dto.AcademicYear, dto.Name));
+
+    [HttpPost("workload-models/{modelId:guid}/norms")]
+    public Task<IActionResult> AddNorm(Guid modelId, [FromBody] PositionNorm norm) =>
+        Run(() => models.AddNormAsync(modelId, norm));
+
+    [HttpPost("workload-models/{modelId:guid}/coefficients")]
+    public Task<IActionResult> AddCoefficient(Guid modelId, [FromBody] ConversionCoefficient coefficient) =>
+        Run(() => models.AddCoefficientAsync(modelId, coefficient));
+
+    [HttpPost("workload-models/{modelId:guid}/activate")]
+    public Task<IActionResult> ActivateModel(Guid modelId) => Run(() => models.ActivateAsync(modelId));
+
+    [HttpPost("workload-models/{modelId:guid}/archive")]
+    public Task<IActionResult> ArchiveModel(Guid modelId) => Run(() => models.ArchiveAsync(modelId));
+
+    private async Task<IActionResult> Run<T>(Func<Task<T>> action)
     {
-        if (coefficient.Coefficient <= 0) return BadRequest(new { Error = "Coeficientul trebuie să fie pozitiv." });
-        try { WorkloadService.AcademicYearRange(coefficient.AcademicYear); }
-        catch (ArgumentException ex) { return BadRequest(new { Error = ex.Message }); }
-        if (await context.ConversionCoefficients.AnyAsync(c =>
-                c.AcademicYear == coefficient.AcademicYear && c.ActivityType == coefficient.ActivityType))
-            return Conflict(new { Error = "Coeficientul pentru acest tip de activitate și an există deja." });
-
-        context.ConversionCoefficients.Add(coefficient);
-        await context.SaveChangesAsync();
-        return Ok(coefficient);
+        try { return Ok(await action()); }
+        catch (KeyNotFoundException ex) { return NotFound(new { Error = ex.Message }); }
+        catch (Exception ex) when (ex is InvalidOperationException or ArgumentException)
+        { return BadRequest(new { Error = ex.Message }); }
     }
 
     // ===== Calculul sarcinii =====
     [HttpGet("professors/{professorProfileId:guid}/workload")]
-    public async Task<IActionResult> GetWorkload(Guid professorProfileId, [FromQuery] string academicYear, [FromQuery] int semester = 1)
+    public async Task<IActionResult> GetWorkload(Guid professorProfileId, [FromQuery] string academicYear)
     {
-        try { return Ok(await workload.CalculateAsync(professorProfileId, academicYear, semester)); }
+        try { return Ok(await workload.CalculateAsync(professorProfileId, academicYear)); }
         catch (KeyNotFoundException ex) { return NotFound(new { Error = ex.Message }); }
     }
 
@@ -83,8 +83,8 @@ public class WorkloadController(AppDbContext context, WorkloadService workload, 
         if (employment is null) return NotFound(new { Error = "Angajarea nu a fost găsită." });
         if (contract.EndDate <= contract.StartDate)
             return BadRequest(new { Error = "Data de sfârșit trebuie să fie după data de început." });
-        if (contract.WeeklyHours <= 0)
-            return BadRequest(new { Error = "Orele pe săptămână trebuie să fie pozitive." });
+        if (contract.AnnualHours <= 0)
+            return BadRequest(new { Error = "Orele conventionale pe an trebuie să fie pozitive." });
         if (string.IsNullOrWhiteSpace(contract.Number))
             return BadRequest(new { Error = "Numărul contractului este obligatoriu." });
         if (employment.EmploymentType == EmploymentType.ExternalMultiJob && string.IsNullOrWhiteSpace(contract.BaseEmployer))
@@ -194,6 +194,7 @@ public class WorkloadController(AppDbContext context, WorkloadService workload, 
     }
 }
 
+public record CreateModelDto(string AcademicYear, string? Name);
 public record ReviewDocumentDto(DocumentStatus Status, string Reviewer);
 public record CreatePlanDto(Guid DepartmentId, string AcademicYear);
 public record TransitionDto(StaffingPlanStatus ToStatus, string Actor, string? Comment);

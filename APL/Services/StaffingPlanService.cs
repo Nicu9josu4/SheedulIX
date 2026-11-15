@@ -78,7 +78,7 @@ public class StaffingPlanService(AppDbContext context, WorkloadService workload)
         return plan;
     }
 
-    /// <summary>Calculul sarcinii pentru toti profesorii departamentului (ambele semestre).</summary>
+    /// <summary>Calculul sarcinii anuale pentru toti profesorii departamentului.</summary>
     public async Task<List<WorkloadResult>> DepartmentWorkloadAsync(Guid departmentId, string academicYear)
     {
         var profileIds = await context.ProfessorProfiles
@@ -88,8 +88,7 @@ public class StaffingPlanService(AppDbContext context, WorkloadService workload)
 
         var results = new List<WorkloadResult>();
         foreach (var id in profileIds)
-            foreach (var semester in new[] { 1, 2 })
-                results.Add(await workload.CalculateAsync(id, academicYear, semester));
+            results.Add(await workload.CalculateAsync(id, academicYear));
         return results;
     }
 
@@ -97,7 +96,7 @@ public class StaffingPlanService(AppDbContext context, WorkloadService workload)
     {
         var all = await DepartmentWorkloadAsync(plan.DepartmentId, plan.AcademicYear);
         return all.Where(r => r.Violations.Count > 0)
-                  .Select(r => $"{r.FullName} (sem. {r.Semester}): {string.Join(" ", r.Violations)}")
+                  .Select(r => $"{r.FullName} {string.Join(" ", r.Violations)}")
                   .ToList();
     }
 }

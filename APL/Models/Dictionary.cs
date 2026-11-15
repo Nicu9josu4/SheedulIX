@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace AcademicManagement.Domain;
@@ -114,8 +114,9 @@ public class Curriculum
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid StudyProgramId { get; set; }
     public StudyProgram StudyProgram { get; set; } = null!;
-    public string Version { get; set; } = string.Empty; // e.g., "2026-2027"
+    public string Version { get; set; } = string.Empty; // e.g., "2026-2027" (anul de intrare = primul an)
     public bool IsActive { get; set; } = true;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public ICollection<CurriculumSubject> Subjects { get; set; } = new List<CurriculumSubject>();
 }
@@ -147,6 +148,8 @@ public class Group
     public Guid LanguageId { get; set; }
     public Language Language { get; set; } = null!;
     public int YearOfStudy { get; set; }
+    /// <summary>Anul în care a început cohorta (ex. 2026). Determină curriculumul atribuit.</summary>
+    public int? EntryYear { get; set; }
     public int StudentCount { get; set; }
 
     public ICollection<Subgroup> Subgroups { get; set; } = new List<Subgroup>();

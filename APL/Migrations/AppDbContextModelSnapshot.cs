@@ -64,6 +64,10 @@ namespace AcademicManagement.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<decimal>("AnnualHours")
+                        .HasPrecision(7, 2)
+                        .HasColumnType("numeric(7,2)");
+
                     b.Property<string>("BaseEmployer")
                         .HasColumnType("text");
 
@@ -90,10 +94,6 @@ namespace AcademicManagement.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
-                    b.Property<decimal>("WeeklyHours")
-                        .HasPrecision(5, 2)
-                        .HasColumnType("numeric(5,2)");
-
                     b.HasKey("Id");
 
                     b.HasIndex("DepartmentEmploymentId");
@@ -112,11 +112,6 @@ namespace AcademicManagement.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("AcademicYear")
-                        .IsRequired()
-                        .HasMaxLength(9)
-                        .HasColumnType("character varying(9)");
-
                     b.Property<string>("ActivityType")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -126,9 +121,12 @@ namespace AcademicManagement.Migrations
                         .HasPrecision(5, 3)
                         .HasColumnType("numeric(5,3)");
 
+                    b.Property<Guid>("WorkloadModelId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("AcademicYear", "ActivityType")
+                    b.HasIndex("WorkloadModelId", "ActivityType")
                         .IsUnique();
 
                     b.ToTable("ConversionCoefficients", (string)null);
@@ -139,6 +137,9 @@ namespace AcademicManagement.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
@@ -323,6 +324,9 @@ namespace AcademicManagement.Migrations
                     b.Property<Guid>("CurriculumId")
                         .HasColumnType("uuid");
 
+                    b.Property<int?>("EntryYear")
+                        .HasColumnType("integer");
+
                     b.Property<Guid>("LanguageId")
                         .HasColumnType("uuid");
 
@@ -412,34 +416,29 @@ namespace AcademicManagement.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("AcademicYear")
-                        .IsRequired()
-                        .HasMaxLength(9)
-                        .HasColumnType("character varying(9)");
-
                     b.Property<decimal>("BaseNormHours")
-                        .HasPrecision(5, 2)
-                        .HasColumnType("numeric(5,2)");
+                        .HasPrecision(7, 2)
+                        .HasColumnType("numeric(7,2)");
 
                     b.Property<decimal>("MaxHours")
-                        .HasPrecision(5, 2)
-                        .HasColumnType("numeric(5,2)");
+                        .HasPrecision(7, 2)
+                        .HasColumnType("numeric(7,2)");
 
                     b.Property<decimal>("MinHours")
-                        .HasPrecision(5, 2)
-                        .HasColumnType("numeric(5,2)");
+                        .HasPrecision(7, 2)
+                        .HasColumnType("numeric(7,2)");
 
                     b.Property<string>("Position")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<int>("WeeksPerSemester")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("WorkloadModelId")
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Position", "AcademicYear")
+                    b.HasIndex("WorkloadModelId", "Position")
                         .IsUnique();
 
                     b.ToTable("PositionNorms", (string)null);
@@ -664,6 +663,38 @@ namespace AcademicManagement.Migrations
                         });
                 });
 
+            modelBuilder.Entity("AcademicManagement.Domain.WorkloadModel", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AcademicYear")
+                        .IsRequired()
+                        .HasMaxLength(9)
+                        .HasColumnType("character varying(9)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AcademicYear")
+                        .IsUnique();
+
+                    b.ToTable("WorkloadModels", (string)null);
+                });
+
             modelBuilder.Entity("AcademicManagement.Domain.ApprovalStep", b =>
                 {
                     b.HasOne("AcademicManagement.Domain.StaffingPlan", "StaffingPlan")
@@ -684,6 +715,17 @@ namespace AcademicManagement.Migrations
                         .IsRequired();
 
                     b.Navigation("DepartmentEmployment");
+                });
+
+            modelBuilder.Entity("AcademicManagement.Domain.ConversionCoefficient", b =>
+                {
+                    b.HasOne("AcademicManagement.Domain.WorkloadModel", "WorkloadModel")
+                        .WithMany("Coefficients")
+                        .HasForeignKey("WorkloadModelId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("WorkloadModel");
                 });
 
             modelBuilder.Entity("AcademicManagement.Domain.Curriculum", b =>
@@ -786,6 +828,17 @@ namespace AcademicManagement.Migrations
                     b.Navigation("Language");
 
                     b.Navigation("StudyProgram");
+                });
+
+            modelBuilder.Entity("AcademicManagement.Domain.PositionNorm", b =>
+                {
+                    b.HasOne("AcademicManagement.Domain.WorkloadModel", "WorkloadModel")
+                        .WithMany("Norms")
+                        .HasForeignKey("WorkloadModelId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("WorkloadModel");
                 });
 
             modelBuilder.Entity("AcademicManagement.Domain.ProfessorLanguage", b =>
@@ -946,6 +999,13 @@ namespace AcademicManagement.Migrations
             modelBuilder.Entity("AcademicManagement.Domain.Subject", b =>
                 {
                     b.Navigation("QualifiedProfessors");
+                });
+
+            modelBuilder.Entity("AcademicManagement.Domain.WorkloadModel", b =>
+                {
+                    b.Navigation("Coefficients");
+
+                    b.Navigation("Norms");
                 });
 #pragma warning restore 612, 618
         }

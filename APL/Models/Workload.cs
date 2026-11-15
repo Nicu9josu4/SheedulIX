@@ -7,29 +7,48 @@ public enum DocumentType { CurriculumVitae, IdentityCard, Diploma, EmployerCerti
 public enum DocumentStatus { Missing, Submitted, Validated, Rejected }
 public enum StaffingPlanStatus { Draft, Submitted, DepartmentApproved, FacultyApproved, Approved, Rejected }
 
+public enum WorkloadModelStatus { Draft, Active, Archived }
+
 /// <summary>
-/// Norma didactica pe functie si an universitar. Valorile sunt configurabile
-/// (nu sunt hardcodate) ca sa urmeze legislatia / regulamentul universitatii.
+/// Modelul de calcul al sarcinii pentru un an universitar: grupeaza normele pe functii si
+/// coeficientii de conversie. Fiecare an are propriul model (poate diferi de la an la an) si poate fi
+/// copiat din anul anterior. Doar un model Draft poate fi modificat; Active este blocat, Archived este istoric.
+/// </summary>
+public class WorkloadModel
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string AcademicYear { get; set; } = string.Empty; // ex: 2026-2027, unic
+    public string Name { get; set; } = string.Empty;
+    public WorkloadModelStatus Status { get; set; } = WorkloadModelStatus.Draft;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    public ICollection<PositionNorm> Norms { get; set; } = new List<PositionNorm>();
+    public ICollection<ConversionCoefficient> Coefficients { get; set; } = new List<ConversionCoefficient>();
+}
+
+/// <summary>
+/// Norma didactica anuala pe functie, in ore conventionale. Valorile sunt configurabile
+/// (nu sunt hardcodate) ca sa urmeze regulamentul universitatii.
 /// "Position" se potriveste cu DepartmentEmployment.Position.
 /// </summary>
 public class PositionNorm
 {
     public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid WorkloadModelId { get; set; }
+    public WorkloadModel WorkloadModel { get; set; } = null!;
     public string Position { get; set; } = string.Empty;
-    public string AcademicYear { get; set; } = string.Empty; // ex: 2026-2027
-    /// <summary>Norma de baza, in ore conventionale pe saptamana.</summary>
+    /// <summary>Norma de baza, in ore conventionale pe an.</summary>
     public decimal BaseNormHours { get; set; }
     public decimal MinHours { get; set; }
     public decimal MaxHours { get; set; }
-    /// <summary>Numarul de saptamani ale semestrului, folosit la transformarea orelor semestriale in ore/saptamana.</summary>
-    public int WeeksPerSemester { get; set; } = 14;
 }
 
-/// <summary>Coeficient de transformare a orelor fizice in ore conventionale.</summary>
+/// <summary>Coeficient de transformare a orelor fizice in ore conventionale (pe tip de activitate).</summary>
 public class ConversionCoefficient
 {
     public Guid Id { get; set; } = Guid.NewGuid();
-    public string AcademicYear { get; set; } = string.Empty;
+    public Guid WorkloadModelId { get; set; }
+    public WorkloadModel WorkloadModel { get; set; } = null!;
     public ActivityType ActivityType { get; set; }
     public decimal Coefficient { get; set; } = 1m;
 }
@@ -45,7 +64,8 @@ public class Contract
     public ContractStatus Status { get; set; } = ContractStatus.Draft;
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; }
-    public decimal WeeklyHours { get; set; }
+    /// <summary>Ore conventionale contractate pe an universitar.</summary>
+    public decimal AnnualHours { get; set; }
     /// <summary>Angajatorul de baza (pentru cadrele asociate externe).</summary>
     public string? BaseEmployer { get; set; }
 }

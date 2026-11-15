@@ -10,6 +10,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddScoped<AcademicService>();
 builder.Services.AddScoped<WorkloadService>();
+builder.Services.AddScoped<WorkloadModelService>();
 builder.Services.AddScoped<StaffingPlanService>();
 builder.Services.AddControllers(o => o.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true)
     .AddJsonOptions(o => o.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles);
