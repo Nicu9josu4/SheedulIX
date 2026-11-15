@@ -62,7 +62,7 @@ Meniul **Disponibilitate** permite fiecărui cadru didactic (completat de șeful
 Endpoint-uri: `GET /api/time-slots`, `GET|PUT /api/professors/{id}/availability?academicYear=`, `GET .../availability/feasibility?academicYear=`, `POST .../availability/parse`.
 
 - **Interpretare din text liber** (`parse`): propune o grilă din fraze ca „nu pot joi, pot doar până la 12, prefer marți”. Nu salvează nimic; omul verifică grila și apoi salvează. Folosește **Claude** (`claude-opus-5-5`, rezultat JSON validat) dacă `ANTHROPIC_API_KEY` este setat în mediu sau `Anthropic:Enabled` este `true`; altfel, sau dacă apelul eșuează ori este refuzat, folosește **reguli simple** pentru formulările uzuale. Către Claude pleacă doar textul doleanței și grila de perechi, fără nume sau alte date personale.
-- **Verificare de fezabilitate**: perechile necesare pe săptămână (ore pe semestru ÷ 14 săptămâni ÷ 2 ore pe pereche) față de perechile libere în cele mai bune zile permise.
+- **Verificare de fezabilitate**: perechile necesare pe săptămână (ore pe semestru ÷ 15 săptămâni ÷ 2 ore pe pereche) față de perechile libere în cele mai bune zile permise.
 - Aceste date vor fi folosite de generatorul de orar (etapa următoare); deocamdată se salvează și se verifică doar fezabilitatea sarcinii.
 
 ### Verificarea repartizărilor (disponibilitate + normă)
@@ -71,3 +71,17 @@ Endpoint-uri: `GET /api/time-slots`, `GET|PUT /api/professors/{id}/availability?
 - În ecranul **Sarcină didactică**, verificarea rulează în timp real pe măsură ce completezi formularul (cu an universitar și semestru).
 - `GET /api/departments/{id}/feasibility?academicYear=` listează profesorii al căror volum de ore nu încape în disponibilitatea declarată.
 - La depunerea statului de funcții, avertismentele de disponibilitate se adaugă în istoricul de aprobare (nu blochează depunerea).
+
+## Orar (generare automată)
+
+Meniul **Orar** generează orarul unui an universitar și semestru din repartizările existente, cu un solver de constrângeri (**Google OR-Tools CP-SAT**). Se gestionează și **sălile** (cod, corp, capacitate, tip curs/seminar/laborator, indisponibilitate).
+
+Endpoint-uri: `GET|POST /api/rooms`, `POST /api/rooms/{id}/active`, `DELETE /api/rooms/{id}`, `POST /api/timetable/generate` (`academicYear`, `semester`, `timeLimitSeconds`), `GET /api/timetable/summary`, `GET /api/timetable?academicYear=&semester=&groupId=|professorId=|roomId=`.
+
+**Reguli obligatorii (nu se încalcă):** o pereche nu poate fi în două locuri deodată (profesor, grupă sau subgrupă, sală); o activitate pe grupă ocupă și toate subgrupele ei; profesorul predă doar în celulele în care nu e „nu pot” și nu e ocupat extern; numărul maxim de zile declarat de profesor; sala potrivită ca tip (curs → sală de curs, seminar → seminar sau curs, laborator → laborator) și capacitate; săptămâni pare/impare; două perechi consecutive ale aceluiași profesor nu pot fi în clădiri diferite.
+
+**Reguli moi (se minimizează):** celule „aș evita”, zile de predare în plus; „prefer” este recompensat. Ce nu încape rămâne în lista **neplasate**, cu motiv (nicio sală potrivită, profesor fără celule disponibile, sau nu a rămas loc fără conflicte).
+
+**Ipoteze (de confirmat cu UTM):** semestrul are 15 săptămâni; o pereche = 2 ore; din orele pe semestru rezultă perechi săptămânale și, pentru rest, perechi la două săptămâni (pare sau impare); grila de perechi este cea din `TimeSlots`. O sală aparține unui singur corp, iar deplasarea se tratează simplu (clădiri diferite în perechi consecutive sunt interzise).
+
+**Încă nu sunt implementate** (din caietul de sarcini): maximum 4–5 perechi pe zi și interzicerea a 3 cursuri consecutive, seminar în altă zi decât cursul, cursuri comune pe serii de grupe, ferestre de disponibilitate ale sălilor, export Excel/PDF al orarului.

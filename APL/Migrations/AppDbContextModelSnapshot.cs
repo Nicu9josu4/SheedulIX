@@ -598,6 +598,47 @@ namespace AcademicManagement.Migrations
                     b.ToTable("ProfessorSubjects", (string)null);
                 });
 
+            modelBuilder.Entity("AcademicManagement.Domain.Room", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Active")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Building")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("Capacity")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<bool>("HasComputers")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Building", "Code")
+                        .IsUnique();
+
+                    b.ToTable("Rooms", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Rooms_Capacity", "\"Capacity\" > 0");
+                        });
+                });
+
             modelBuilder.Entity("AcademicManagement.Domain.StaffingPlan", b =>
                 {
                     b.Property<Guid>("Id")
@@ -824,6 +865,116 @@ namespace AcademicManagement.Migrations
                             IsLunchBreak = false,
                             StartTime = new TimeSpan(0, 14, 30, 0, 0)
                         });
+                });
+
+            modelBuilder.Entity("AcademicManagement.Domain.TimetableEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("DayOfWeek")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Parity")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<Guid>("RoomId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SlotNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TeachingAssignmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TimetableRunId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RoomId");
+
+                    b.HasIndex("TeachingAssignmentId");
+
+                    b.HasIndex("TimetableRunId", "DayOfWeek", "SlotNumber");
+
+                    b.ToTable("TimetableEntries", (string)null);
+                });
+
+            modelBuilder.Entity("AcademicManagement.Domain.TimetableRun", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AcademicYear")
+                        .IsRequired()
+                        .HasMaxLength(9)
+                        .HasColumnType("character varying(9)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Penalty")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Semester")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("SessionsPlaced")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("SessionsTotal")
+                        .HasColumnType("integer");
+
+                    b.Property<double>("SolveSeconds")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("SolverStatus")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<int>("TimeLimitSeconds")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AcademicYear", "Semester");
+
+                    b.ToTable("TimetableRuns", (string)null);
+                });
+
+            modelBuilder.Entity("AcademicManagement.Domain.TimetableUnplaced", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<int>("Sessions")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TeachingAssignmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TimetableRunId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TeachingAssignmentId");
+
+                    b.HasIndex("TimetableRunId");
+
+                    b.ToTable("TimetableUnplaced", (string)null);
                 });
 
             modelBuilder.Entity("AcademicManagement.Domain.WorkloadModel", b =>
@@ -1149,6 +1300,52 @@ namespace AcademicManagement.Migrations
                     b.Navigation("Subject");
                 });
 
+            modelBuilder.Entity("AcademicManagement.Domain.TimetableEntry", b =>
+                {
+                    b.HasOne("AcademicManagement.Domain.Room", "Room")
+                        .WithMany()
+                        .HasForeignKey("RoomId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AcademicManagement.Domain.TeachingAssignment", "TeachingAssignment")
+                        .WithMany()
+                        .HasForeignKey("TeachingAssignmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("AcademicManagement.Domain.TimetableRun", "TimetableRun")
+                        .WithMany("Entries")
+                        .HasForeignKey("TimetableRunId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Room");
+
+                    b.Navigation("TeachingAssignment");
+
+                    b.Navigation("TimetableRun");
+                });
+
+            modelBuilder.Entity("AcademicManagement.Domain.TimetableUnplaced", b =>
+                {
+                    b.HasOne("AcademicManagement.Domain.TeachingAssignment", "TeachingAssignment")
+                        .WithMany()
+                        .HasForeignKey("TeachingAssignmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("AcademicManagement.Domain.TimetableRun", "TimetableRun")
+                        .WithMany("Unplaced")
+                        .HasForeignKey("TimetableRunId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("TeachingAssignment");
+
+                    b.Navigation("TimetableRun");
+                });
+
             modelBuilder.Entity("AcademicManagement.Domain.Curriculum", b =>
                 {
                     b.Navigation("Subjects");
@@ -1195,6 +1392,13 @@ namespace AcademicManagement.Migrations
             modelBuilder.Entity("AcademicManagement.Domain.Subject", b =>
                 {
                     b.Navigation("QualifiedProfessors");
+                });
+
+            modelBuilder.Entity("AcademicManagement.Domain.TimetableRun", b =>
+                {
+                    b.Navigation("Entries");
+
+                    b.Navigation("Unplaced");
                 });
 
             modelBuilder.Entity("AcademicManagement.Domain.WorkloadModel", b =>

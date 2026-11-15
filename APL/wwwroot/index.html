@@ -52,6 +52,9 @@
                 <button @click="currentTab = 'import'" :class="currentTab === 'import' ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800 hover:text-white'" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition">
                     <i class="fa-solid fa-file-import w-5"></i><span>Import date</span>
                 </button>
+                <button @click="currentTab = 'timetable'; loadTimetable()" :class="currentTab === 'timetable' ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800 hover:text-white'" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition">
+                    <i class="fa-solid fa-table-cells w-5"></i><span>Orar</span>
+                </button>
                 <button @click="currentTab = 'availability'" :class="currentTab === 'availability' ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800 hover:text-white'" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition">
                     <i class="fa-solid fa-calendar-check w-5"></i><span>Disponibilitate</span>
                 </button>
@@ -742,6 +745,120 @@
                     </div>
                 </div>
 
+                <!-- ORAR -->
+                <div x-show="currentTab === 'timetable'" x-cloak class="space-y-6 max-w-6xl">
+                    <div class="bg-white p-6 rounded-xl border shadow-sm space-y-4">
+                        <h3 class="font-bold text-slate-700 text-lg border-b pb-2">Generare orar</h3>
+                        <div class="flex flex-wrap items-end gap-3">
+                            <div><label class="block text-xs text-slate-500 mb-1">An universitar</label>
+                                <input type="text" x-model="tt.year" @change="loadTimetable()" class="border rounded px-3 py-2 text-sm w-32" placeholder="2026-2027"></div>
+                            <div><label class="block text-xs text-slate-500 mb-1">Semestru</label>
+                                <select x-model.number="tt.semester" @change="loadTimetable()" class="border rounded px-3 py-2 text-sm"><option value="1">1</option><option value="2">2</option></select></div>
+                            <div><label class="block text-xs text-slate-500 mb-1">Limită de timp (secunde)</label>
+                                <input type="number" min="1" max="300" x-model.number="tt.limit" class="border rounded px-3 py-2 text-sm w-28"></div>
+                            <button type="button" @click="generateTimetable()" :disabled="tt.busy" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded text-sm font-medium">
+                                <span x-show="!tt.busy"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Generează orarul</span>
+                                <span x-show="tt.busy"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Se calculează (până la <span x-text="tt.limit"></span> s)...</span>
+                            </button>
+                        </div>
+                        <p class="text-xs text-slate-500">Se folosesc repartizările din ecranul „Sarcină didactică”, disponibilitățile profesorilor și sălile de mai jos. Generarea înlocuiește orarul anterior al aceluiași semestru.</p>
+                        <div x-show="tt.error" class="bg-red-50 border border-red-200 text-red-700 text-sm rounded p-3" x-text="tt.error"></div>
+
+                        <div x-show="tt.summary" class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                            <div class="bg-slate-50 rounded p-3"><div class="text-xs text-slate-500">Perechi plasate</div>
+                                <div class="text-xl font-bold" :class="tt.summary && tt.summary.sessionsPlaced === tt.summary.sessionsTotal ? 'text-emerald-600' : 'text-amber-600'" x-text="tt.summary ? tt.summary.sessionsPlaced + ' / ' + tt.summary.sessionsTotal : ''"></div></div>
+                            <div class="bg-slate-50 rounded p-3"><div class="text-xs text-slate-500">Stare solver</div>
+                                <div class="text-xl font-bold text-slate-700" x-text="tt.summary ? ({Optimal:'Optim', Feasible:'Bun (timp epuizat)'}[tt.summary.solverStatus] || tt.summary.solverStatus) : ''"></div></div>
+                            <div class="bg-slate-50 rounded p-3"><div class="text-xs text-slate-500">Penalizare (mai mic = mai bine)</div>
+                                <div class="text-xl font-bold text-slate-700" x-text="tt.summary ? tt.summary.penalty : ''"></div></div>
+                            <div class="bg-slate-50 rounded p-3"><div class="text-xs text-slate-500">Timp de calcul</div>
+                                <div class="text-xl font-bold text-slate-700" x-text="tt.summary ? tt.summary.solveSeconds + ' s' : ''"></div></div>
+                        </div>
+                        <div x-show="tt.summary && tt.summary.unplaced.length" class="bg-amber-50 border border-amber-200 rounded p-3 text-sm">
+                            <div class="font-semibold text-amber-800 mb-1">Perechi neplasate</div>
+                            <ul class="list-disc pl-5 space-y-0.5 text-amber-800">
+                                <template x-for="u in (tt.summary ? tt.summary.unplaced : [])" :key="u.teachingAssignmentId">
+                                    <li><b x-text="u.professor"></b> · <span x-text="u.subject + ' (' + u.group + ', ' + u.activity + ')'"></span> — <span x-text="u.sessions + ' pereche(i): ' + u.reason"></span></li>
+                                </template>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div x-show="tt.summary" class="bg-white p-6 rounded-xl border shadow-sm space-y-4">
+                        <div class="flex flex-wrap items-end gap-3 border-b pb-3">
+                            <h3 class="font-bold text-slate-700 text-lg mr-4">Orarul</h3>
+                            <div><label class="block text-xs text-slate-500 mb-1">Vizualizare după</label>
+                                <select x-model="tt.viewBy" @change="tt.viewId = ''; loadTimetableEntries()" class="border rounded px-3 py-2 text-sm">
+                                    <option value="group">Grupă</option><option value="professor">Profesor</option><option value="room">Sală</option></select></div>
+                            <div><label class="block text-xs text-slate-500 mb-1" x-text="({group:'Grupa', professor:'Profesorul', room:'Sala'})[tt.viewBy]"></label>
+                                <select x-model="tt.viewId" @change="loadTimetableEntries()" class="border rounded px-3 py-2 text-sm min-w-[220px]">
+                                    <option value="">Toate</option>
+                                    <template x-for="o in ttViewOptions()" :key="o.id"><option :value="o.id" x-text="o.label"></option></template>
+                                </select></div>
+                            <div class="flex items-center gap-3 text-xs text-slate-600 ml-auto">
+                                <span class="inline-flex items-center gap-1"><span class="w-3 h-3 rounded bg-indigo-200"></span>Curs</span>
+                                <span class="inline-flex items-center gap-1"><span class="w-3 h-3 rounded bg-emerald-200"></span>Seminar</span>
+                                <span class="inline-flex items-center gap-1"><span class="w-3 h-3 rounded bg-amber-200"></span>Laborator</span>
+                            </div>
+                        </div>
+                        <table class="w-full text-xs border-separate border-spacing-1 table-fixed">
+                            <thead><tr>
+                                <th class="w-20"></th>
+                                <template x-for="s in ttSlots()" :key="s.slot"><th class="text-slate-600 font-medium"><div x-text="'Pereche ' + s.slot"></div><div class="font-normal text-slate-400" x-text="s.start + '–' + s.end"></div></th></template>
+                            </tr></thead>
+                            <tbody>
+                                <template x-for="(dayName, di) in dayNames" :key="di">
+                                    <tr>
+                                        <td class="font-semibold text-slate-600 align-top pt-2" x-text="dayName"></td>
+                                        <template x-for="s in ttSlots()" :key="s.slot">
+                                            <td class="align-top bg-slate-50 rounded p-1 h-20">
+                                                <template x-for="e in ttAt(di + 1, s.slot)" :key="e.id">
+                                                    <div :class="{Lecture:'bg-indigo-100 border-indigo-300', Seminar:'bg-emerald-100 border-emerald-300', Laboratory:'bg-amber-100 border-amber-300'}[e.activity]" class="border rounded px-1.5 py-1 mb-1">
+                                                        <div class="font-semibold leading-tight" x-text="e.subject"></div>
+                                                        <div class="text-slate-600" x-text="e.group + (e.subgroup ? ' · ' + e.subgroup.replace(e.group + '-', '') : '')"></div>
+                                                        <div class="text-slate-600" x-text="e.professor"></div>
+                                                        <div class="text-slate-500"><span x-text="e.room + ' (' + e.building + ')'"></span>
+                                                            <span x-show="e.parity !== 'All'" class="ml-1 px-1 rounded bg-white border" x-text="e.parity === 'Odd' ? 'impare' : 'pare'"></span></div>
+                                                    </div>
+                                                </template>
+                                            </td>
+                                        </template>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Săli -->
+                    <div class="bg-white p-6 rounded-xl border shadow-sm space-y-3">
+                        <h3 class="font-bold text-slate-700 text-lg border-b pb-2">Săli</h3>
+                        <div class="flex flex-wrap items-end gap-2">
+                            <input type="text" x-model="tt.newRoom.code" placeholder="Cod (ex. 201)" class="border rounded px-2 py-1.5 text-sm w-28">
+                            <input type="text" x-model="tt.newRoom.building" placeholder="Corp (ex. Corp 3)" class="border rounded px-2 py-1.5 text-sm w-36">
+                            <input type="number" min="1" x-model.number="tt.newRoom.capacity" placeholder="Capacitate" class="border rounded px-2 py-1.5 text-sm w-28">
+                            <select x-model="tt.newRoom.type" class="border rounded px-2 py-1.5 text-sm">
+                                <option value="Lecture">Curs</option><option value="Seminar">Seminar</option><option value="Laboratory">Laborator</option></select>
+                            <label class="text-sm inline-flex items-center gap-1"><input type="checkbox" x-model="tt.newRoom.hasComputers"> calculatoare</label>
+                            <button type="button" @click="addRoom()" class="border border-indigo-600 text-indigo-700 px-3 py-1.5 rounded text-sm">Adaugă sala</button>
+                        </div>
+                        <div x-show="tt.roomError" class="text-sm text-red-600" x-text="tt.roomError"></div>
+                        <table class="w-full text-sm">
+                            <thead class="text-left text-slate-500 border-b"><tr><th class="py-1">Corp</th><th>Cod</th><th>Tip</th><th>Capacitate</th><th>Stare</th><th></th></tr></thead>
+                            <tbody>
+                                <template x-for="r in tt.rooms" :key="r.id">
+                                    <tr class="border-b">
+                                        <td class="py-1" x-text="r.building"></td><td x-text="r.code"></td>
+                                        <td x-text="({Lecture:'Curs', Seminar:'Seminar', Laboratory:'Laborator'})[r.type] + (r.hasComputers ? ' (calculatoare)' : '')"></td>
+                                        <td x-text="r.capacity"></td>
+                                        <td><button type="button" @click="toggleRoom(r)" :class="r.active ? 'text-emerald-700' : 'text-red-600'" class="underline text-xs" x-text="r.active ? 'Activă' : 'Indisponibilă'"></button></td>
+                                        <td><button type="button" @click="deleteRoom(r)" class="text-xs text-slate-500 underline">Șterge</button></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
                 <!-- DISPONIBILITATE (DOLEANȚE DE TIMP) -->
                 <div x-show="currentTab === 'availability'" x-cloak class="space-y-6 max-w-5xl">
                     <div class="bg-white p-6 rounded-xl border shadow-sm space-y-4">
@@ -867,7 +984,7 @@
                                         <div x-text="f.message"></div>
                                     </div>
                                 </template>
-                                <p class="text-xs text-slate-400">Calcul: ore pe semestru ÷ 14 săptămâni ÷ 2 ore pe pereche, față de perechile libere în cele mai bune zile.</p>
+                                <p class="text-xs text-slate-400">Calcul: ore pe semestru ÷ 15 săptămâni ÷ 2 ore pe pereche, față de perechile libere în cele mai bune zile.</p>
                             </div>
                         </div>
                     </div>

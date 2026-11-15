@@ -22,6 +22,12 @@ public class AppDbContext : DbContext
     public DbSet<TeachingAssignment> TeachingAssignments => Set<TeachingAssignment>();
 
     // Sarcina didactica, cumul si aprobare
+    // Orar
+    public DbSet<Room> Rooms => Set<Room>();
+    public DbSet<TimetableRun> TimetableRuns => Set<TimetableRun>();
+    public DbSet<TimetableEntry> TimetableEntries => Set<TimetableEntry>();
+    public DbSet<TimetableUnplaced> TimetableUnplaced => Set<TimetableUnplaced>();
+
     // Disponibilitate (doleanțe de timp)
     public DbSet<TimeSlot> TimeSlots => Set<TimeSlot>();
     public DbSet<AvailabilityBlock> AvailabilityBlocks => Set<AvailabilityBlock>();
@@ -66,8 +72,46 @@ public class AppDbContext : DbContext
             .HasKey(ps => new { ps.ProfessorProfileId, ps.SubjectId });
     }
 
+    private static void ConfigureTimetable(ModelBuilder mb)
+    {
+        mb.Entity<Room>().ToTable("Rooms");
+        mb.Entity<Room>().Property(r => r.Code).HasMaxLength(50);
+        mb.Entity<Room>().Property(r => r.Building).HasMaxLength(100);
+        mb.Entity<Room>().Property(r => r.Type).HasConversion<string>().HasMaxLength(20);
+        mb.Entity<Room>().HasIndex(r => new { r.Building, r.Code }).IsUnique();
+        mb.Entity<Room>().ToTable(t => t.HasCheckConstraint("CK_Rooms_Capacity", "\"Capacity\" > 0"));
+
+        mb.Entity<TimetableRun>().ToTable("TimetableRuns");
+        mb.Entity<TimetableRun>().Property(r => r.AcademicYear).HasMaxLength(9);
+        mb.Entity<TimetableRun>().Property(r => r.SolverStatus).HasMaxLength(30);
+        mb.Entity<TimetableRun>().HasIndex(r => new { r.AcademicYear, r.Semester });
+
+        mb.Entity<TimetableEntry>().ToTable("TimetableEntries");
+        mb.Entity<TimetableEntry>()
+            .HasOne(e => e.TimetableRun).WithMany(r => r.Entries)
+            .HasForeignKey(e => e.TimetableRunId).OnDelete(DeleteBehavior.Cascade);
+        mb.Entity<TimetableEntry>()
+            .HasOne(e => e.TeachingAssignment).WithMany()
+            .HasForeignKey(e => e.TeachingAssignmentId).OnDelete(DeleteBehavior.Cascade);
+        mb.Entity<TimetableEntry>()
+            .HasOne(e => e.Room).WithMany()
+            .HasForeignKey(e => e.RoomId).OnDelete(DeleteBehavior.Restrict);
+        mb.Entity<TimetableEntry>().Property(e => e.Parity).HasConversion<string>().HasMaxLength(10);
+        mb.Entity<TimetableEntry>().HasIndex(e => new { e.TimetableRunId, e.DayOfWeek, e.SlotNumber });
+
+        mb.Entity<TimetableUnplaced>().ToTable("TimetableUnplaced");
+        mb.Entity<TimetableUnplaced>()
+            .HasOne(u => u.TimetableRun).WithMany(r => r.Unplaced)
+            .HasForeignKey(u => u.TimetableRunId).OnDelete(DeleteBehavior.Cascade);
+        mb.Entity<TimetableUnplaced>()
+            .HasOne(u => u.TeachingAssignment).WithMany()
+            .HasForeignKey(u => u.TeachingAssignmentId).OnDelete(DeleteBehavior.Cascade);
+        mb.Entity<TimetableUnplaced>().Property(u => u.Reason).HasMaxLength(300);
+    }
+
     private static void ConfigureAvailability(ModelBuilder mb)
     {
+        ConfigureTimetable(mb);
         mb.Entity<TimeSlot>().ToTable("TimeSlots").HasKey(t => t.SlotNumber);
         mb.Entity<TimeSlot>().Property(t => t.SlotNumber).ValueGeneratedNever();
         // Grila implicită (de confirmat cu orarul real al UTM); modificabilă direct în tabel.

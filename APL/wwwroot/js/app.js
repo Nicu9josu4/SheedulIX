@@ -216,7 +216,8 @@ document.addEventListener('alpine:init', () => {
             'groups': 'Grupe & Subgrupe',
             'assignments': 'Repartizare Sarcină Didactică',
             'import': 'Import date din Excel',
-            'availability': 'Disponibilitate cadre didactice'
+            'availability': 'Disponibilitate cadre didactice',
+            'timetable': 'Orar'
         },
 
         // Date Nomenclatoare
@@ -246,6 +247,13 @@ document.addEventListener('alpine:init', () => {
         importReport: null,
         importBusy: false,
         importError: '',
+
+        // Orar
+        tt: {
+            year: '2026-2027', semester: 1, limit: 20, busy: false, error: '', summary: null,
+            slots: [], entries: [], rooms: [], viewBy: 'group', viewId: '', roomError: '',
+            newRoom: { code: '', building: '', capacity: 30, type: 'Lecture', hasComputers: false }
+        },
 
         // Disponibilitate (doleanțe de timp)
         dayNames: ['Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă'],
@@ -313,6 +321,81 @@ document.addEventListener('alpine:init', () => {
             academicYear: '2026-2027'
         },
         assignCheck: null,
+
+        // ===== Orar =====
+        ttSlots() { return this.tt.slots.filter(s => !s.isLunchBreak); },
+        ttAt(day, slot) { return this.tt.entries.filter(e => e.day === day && e.slot === slot); },
+        ttViewOptions() {
+            if (this.tt.viewBy === 'group') return this.groups.map(g => ({ id: g.id, label: g.code }));
+            if (this.tt.viewBy === 'professor') return this.professors.map(p => ({ id: p.id, label: p.fullName }));
+            return this.tt.rooms.map(r => ({ id: r.id, label: r.building + ' · ' + r.code }));
+        },
+
+        async loadTimetable() {
+            const t = this.tt;
+            t.error = '';
+            try {
+                const [slots, rooms] = await Promise.all([
+                    fetch(`${API_BASE_URL}/time-slots`).then(r => r.json()),
+                    fetch(`${API_BASE_URL}/rooms`).then(r => r.json())
+                ]);
+                t.slots = slots; t.rooms = rooms;
+                const res = await fetch(`${API_BASE_URL}/timetable/summary?academicYear=${encodeURIComponent(t.year)}&semester=${t.semester}`);
+                t.summary = res.ok ? await res.json() : null;
+                await this.loadTimetableEntries();
+            } catch (e) { t.error = 'Nu s-a putut încărca orarul.'; }
+        },
+
+        async loadTimetableEntries() {
+            const t = this.tt;
+            if (!t.summary) { t.entries = []; return; }
+            const key = { group: 'groupId', professor: 'professorId', room: 'roomId' }[t.viewBy];
+            const q = `academicYear=${encodeURIComponent(t.year)}&semester=${t.semester}` + (t.viewId ? `&${key}=${t.viewId}` : '');
+            const res = await fetch(`${API_BASE_URL}/timetable?${q}`);
+            t.entries = res.ok ? await res.json() : [];
+        },
+
+        async generateTimetable() {
+            const t = this.tt;
+            t.busy = true; t.error = '';
+            try {
+                const res = await fetch(`${API_BASE_URL}/timetable/generate`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ academicYear: t.year, semester: t.semester, timeLimitSeconds: t.limit })
+                });
+                const data = await res.json();
+                if (!res.ok) { t.error = data.error || 'Generarea a eșuat.'; return; }
+                t.summary = data;
+                await this.loadTimetableEntries();
+            } catch (e) { t.error = 'Nu s-a putut contacta serverul.'; }
+            finally { t.busy = false; }
+        },
+
+        async addRoom() {
+            const t = this.tt; t.roomError = '';
+            const res = await fetch(`${API_BASE_URL}/rooms`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...t.newRoom, capacity: Number(t.newRoom.capacity) })
+            });
+            const data = await res.json();
+            if (!res.ok) { t.roomError = data.error || 'Nu s-a putut adăuga sala.'; return; }
+            t.newRoom.code = '';
+            t.rooms = await fetch(`${API_BASE_URL}/rooms`).then(r => r.json());
+        },
+
+        async toggleRoom(room) {
+            await fetch(`${API_BASE_URL}/rooms/${room.id}/active`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(!room.active)
+            });
+            this.tt.rooms = await fetch(`${API_BASE_URL}/rooms`).then(r => r.json());
+        },
+
+        async deleteRoom(room) {
+            this.tt.roomError = '';
+            const res = await fetch(`${API_BASE_URL}/rooms/${room.id}`, { method: 'DELETE' });
+            if (!res.ok) { const d = await res.json(); this.tt.roomError = d.error || 'Nu s-a putut șterge sala.'; return; }
+            this.tt.rooms = await fetch(`${API_BASE_URL}/rooms`).then(r => r.json());
+        },
 
         // ===== Disponibilitate =====
         availSlots() { return this.avail.slots.filter(s => !s.isLunchBreak); },

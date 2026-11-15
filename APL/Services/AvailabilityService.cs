@@ -28,7 +28,7 @@ public record DepartmentFeasibilityRow(Guid ProfessorProfileId, string FullName,
 public class AvailabilityService(AppDbContext context)
 {
     /// <summary>Numărul de săptămâni ale unui semestru, folosit la transformarea orelor semestriale în ore pe săptămână.</summary>
-    public const int WeeksPerSemester = 14;
+    public const int WeeksPerSemester = 15;
     /// <summary>O pereche = 2 ore academice.</summary>
     public const int HoursPerPair = 2;
 
