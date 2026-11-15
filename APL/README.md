@@ -41,3 +41,12 @@ Fără model pentru un an, calculul raportează `NotConfigured` și avertismente
 - `POST /api/staffing-plans`, `GET /api/staffing-plans/{id}`, `POST /api/staffing-plans/{id}/transition`
 
 `TeachingAssignment` are acum `AcademicYear` (obligatoriu, ex. `2026-2027`) și semestrul 1 sau 2.
+
+## Import din Excel
+
+Meniul **Import date** din interfață încarcă `UTM_sablon_import.xlsx` (șablon descărcabil, `wwwroot/templates/`). Sunt importate foile `Departamente`, `Cadre_didactice` și `Discipline`.
+
+- `POST /api/import/preview` verifică fișierul fără să salveze și întoarce raportul pe foi și rânduri (noi / actualizate / neschimbate / erori).
+- `POST /api/import/commit` salvează doar dacă nu există nicio eroare (totul sau nimic, într-o tranzacție).
+- Idempotent: aceeași cheie (cod departament, email sau nume+prenume, cod+denumire disciplină) actualizează, nu dublează.
+- Celelalte foi din șablon (planuri, grupe, calificări, model de calcul, contracte, repartizări) nu sunt încă importate.

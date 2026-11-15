@@ -214,7 +214,8 @@ document.addEventListener('alpine:init', () => {
             'subjects': 'Gestionare Discipline',
             'curriculum': 'Gestionare Curriculum & Planuri',
             'groups': 'Grupe & Subgrupe',
-            'assignments': 'Repartizare Sarcină Didactică'
+            'assignments': 'Repartizare Sarcină Didactică',
+            'import': 'Import date din Excel'
         },
 
         // Date Nomenclatoare
@@ -239,6 +240,12 @@ document.addEventListener('alpine:init', () => {
         editingSubjectId: null,
         isEditingGroup: false,
         editingGroupId: null,
+        // Import Excel
+        importFile: null,
+        importReport: null,
+        importBusy: false,
+        importError: '',
+
         isEditingCurriculum: false,
         editingCurriculumId: null,
 
@@ -293,6 +300,39 @@ document.addEventListener('alpine:init', () => {
             activityType: 'Lecture',
             hours: 30,
             semester: 1
+        },
+
+        onImportFile(event) {
+            this.importFile = event.target.files[0] || null;
+            this.importReport = null;
+            this.importError = '';
+            if (this.importFile) this.runImport('preview');
+        },
+
+        async runImport(mode) {
+            if (!this.importFile) return;
+            this.importBusy = true;
+            this.importError = '';
+            try {
+                const form = new FormData();
+                form.append('file', this.importFile);
+                const res = await fetch(`${API_BASE_URL}/import/${mode}`, { method: 'POST', body: form });
+                const data = await res.json();
+                if (!res.ok) { this.importError = data.error || 'Importul a eșuat.'; this.importReport = null; return; }
+                this.importReport = data;
+                if (data.committed) await this.loadAllData();
+            } catch (e) {
+                this.importError = 'Nu s-a putut contacta serverul.';
+            } finally {
+                this.importBusy = false;
+            }
+        },
+
+        resetImport() {
+            this.importFile = null;
+            this.importReport = null;
+            this.importError = '';
+            if (this.$refs.importInput) this.$refs.importInput.value = '';
         },
 
         async init() {

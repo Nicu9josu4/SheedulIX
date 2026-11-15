@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "apl",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "APL", "--no-build", "--urls", "http://localhost:5099"],
+      "port": 5099
+    }
+  ]
+}
