@@ -12,7 +12,7 @@ using SchedulIX.Data;
 namespace SchedulIX.Migrations
 {
     [DbContext(typeof(ScheduleDbContext))]
-    [Migration("20261115175751_InitialCreate")]
+    [Migration("20261115175939_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -261,12 +261,6 @@ namespace SchedulIX.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<int>("Semester")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("Year")
-                        .HasColumnType("integer");
-
                     b.HasKey("Id");
 
                     b.ToTable("EducationForms");
@@ -493,6 +487,41 @@ namespace SchedulIX.Migrations
                         .IsUnique();
 
                     b.ToTable("StaffingPlans");
+                });
+
+            modelBuilder.Entity("SchedulIX.Models.Entities.Student", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("GroupId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int?>("SubgroupId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GroupId");
+
+                    b.HasIndex("SubgroupId");
+
+                    b.ToTable("Students");
                 });
 
             modelBuilder.Entity("SchedulIX.Models.Entities.Subgroup", b =>
@@ -916,6 +945,24 @@ namespace SchedulIX.Migrations
                     b.Navigation("Department");
                 });
 
+            modelBuilder.Entity("SchedulIX.Models.Entities.Student", b =>
+                {
+                    b.HasOne("SchedulIX.Models.Entities.AcademicGroup", "Group")
+                        .WithMany("Students")
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SchedulIX.Models.Entities.Subgroup", "Subgroup")
+                        .WithMany("Students")
+                        .HasForeignKey("SubgroupId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Group");
+
+                    b.Navigation("Subgroup");
+                });
+
             modelBuilder.Entity("SchedulIX.Models.Entities.Subgroup", b =>
                 {
                     b.HasOne("SchedulIX.Models.Entities.AcademicGroup", "Group")
@@ -1038,6 +1085,8 @@ namespace SchedulIX.Migrations
                 {
                     b.Navigation("Schedules");
 
+                    b.Navigation("Students");
+
                     b.Navigation("Subgroups");
                 });
 
@@ -1101,6 +1150,8 @@ namespace SchedulIX.Migrations
             modelBuilder.Entity("SchedulIX.Models.Entities.Subgroup", b =>
                 {
                     b.Navigation("Schedules");
+
+                    b.Navigation("Students");
                 });
 
             modelBuilder.Entity("SchedulIX.Models.Entities.Teacher", b =>

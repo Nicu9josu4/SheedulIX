@@ -64,9 +64,7 @@ namespace SchedulIX.Migrations
                 {
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    Name = table.Column<string>(type: "text", nullable: false),
-                    Year = table.Column<int>(type: "integer", nullable: false),
-                    Semester = table.Column<int>(type: "integer", nullable: false)
+                    Name = table.Column<string>(type: "text", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -488,6 +486,35 @@ namespace SchedulIX.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Students",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    FirstName = table.Column<string>(type: "text", nullable: false),
+                    LastName = table.Column<string>(type: "text", nullable: false),
+                    Email = table.Column<string>(type: "text", nullable: false),
+                    GroupId = table.Column<int>(type: "integer", nullable: false),
+                    SubgroupId = table.Column<int>(type: "integer", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Students", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Students_AcademicGroups_GroupId",
+                        column: x => x.GroupId,
+                        principalTable: "AcademicGroups",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Students_Subgroups_SubgroupId",
+                        column: x => x.SubgroupId,
+                        principalTable: "Subgroups",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "TeachingAssignments",
                 columns: table => new
                 {
@@ -672,6 +699,16 @@ namespace SchedulIX.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_Students_GroupId",
+                table: "Students",
+                column: "GroupId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Students_SubgroupId",
+                table: "Students",
+                column: "SubgroupId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Subgroups_GroupId",
                 table: "Subgroups",
                 column: "GroupId");
@@ -759,6 +796,9 @@ namespace SchedulIX.Migrations
 
             migrationBuilder.DropTable(
                 name: "Schedules");
+
+            migrationBuilder.DropTable(
+                name: "Students");
 
             migrationBuilder.DropTable(
                 name: "TeacherDocuments");
