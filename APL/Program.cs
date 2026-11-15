@@ -15,6 +15,7 @@ builder.Services.AddScoped<ImportService>();
 builder.Services.AddScoped<AvailabilityService>();
 builder.Services.AddScoped<AvailabilityParser>();
 builder.Services.AddScoped<TimetableService>();
+builder.Services.AddScoped<TimetableExportService>();
 builder.Services.AddScoped<StaffingPlanService>();
 builder.Services.AddControllers(o => o.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true)
     .AddJsonOptions(o => o.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles);

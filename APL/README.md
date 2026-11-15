@@ -84,4 +84,10 @@ Endpoint-uri: `GET|POST /api/rooms`, `POST /api/rooms/{id}/active`, `DELETE /api
 
 **Ipoteze (de confirmat cu UTM):** semestrul are 15 săptămâni; o pereche = 2 ore; din orele pe semestru rezultă perechi săptămânale și, pentru rest, perechi la două săptămâni (pare sau impare); grila de perechi este cea din `TimeSlots`. O sală aparține unui singur corp, iar deplasarea se tratează simplu (clădiri diferite în perechi consecutive sunt interzise).
 
-**Încă nu sunt implementate** (din caietul de sarcini): maximum 4–5 perechi pe zi și interzicerea a 3 cursuri consecutive, seminar în altă zi decât cursul, cursuri comune pe serii de grupe, ferestre de disponibilitate ale sălilor, export Excel/PDF al orarului.
+**Încă nu sunt implementate** (din caietul de sarcini): maximum 4–5 perechi pe zi și interzicerea a 3 cursuri consecutive, seminar în altă zi decât cursul, cursuri comune pe serii de grupe, ferestre de disponibilitate ale sălilor.
+
+### Export (Excel și PDF)
+
+- `GET /api/timetable/export/excel?academicYear=&semester=` — un registru cu foile **Grupe**, **Profesori**, **Săli** (câte un bloc zi × pereche pentru fiecare, cu culori pe tip de activitate), **Neplasate** și **Rezumat**.
+- `GET /api/timetable/export/pdf?academicYear=&semester=&view=group|professor|room|all&id=` — PDF A4 pe orizontală, **gata de tipar**, câte o pagină pe grupă (implicit), profesor sau sală; `id` restrânge la una singură. În ecranul **Orar**, butoanele „Export Excel” și „Export PDF” folosesc vizualizarea aleasă.
+- PDF-ul folosește **QuestPDF** sub licența Community; verifică dacă aceasta se aplică instituției tale (https://www.questpdf.com/license/) înainte de utilizarea în producție.

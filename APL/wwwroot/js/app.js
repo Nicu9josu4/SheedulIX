@@ -323,6 +323,11 @@ document.addEventListener('alpine:init', () => {
         assignCheck: null,
 
         // ===== Orar =====
+        // PDF pentru vizualizarea curentă: o singură grupă / un profesor / o sală dacă e aleasă, altfel toate de acel tip
+        ttPdfUrl() {
+            const t = this.tt;
+            return `/api/timetable/export/pdf?academicYear=${encodeURIComponent(t.year)}&semester=${t.semester}&view=${t.viewBy}` + (t.viewId ? `&id=${t.viewId}` : '');
+        },
         ttSlots() { return this.tt.slots.filter(s => !s.isLunchBreak); },
         ttAt(day, slot) { return this.tt.entries.filter(e => e.day === day && e.slot === slot); },
         ttViewOptions() {

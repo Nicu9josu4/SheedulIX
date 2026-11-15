@@ -8,8 +8,38 @@ namespace AcademicManagement.Controllers;
 
 [ApiController]
 [Route("api")]
-public class TimetableController(AppDbContext context, TimetableService timetable) : ControllerBase
+public class TimetableController(AppDbContext context, TimetableService timetable, TimetableExportService export) : ControllerBase
 {
+    // ===== Export =====
+    /// <summary>Excel cu orarul pe grupe, profesori și săli, plus perechile neplasate.</summary>
+    [HttpGet("timetable/export/excel")]
+    public async Task<IActionResult> ExportExcel([FromQuery] string academicYear, [FromQuery] int semester)
+    {
+        try
+        {
+            var bytes = await export.ExcelAsync(academicYear, semester);
+            return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"orar-{academicYear}-sem{semester}.xlsx");
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or ArgumentException)
+        { return BadRequest(new { Error = ex.Message.Split(" (Parameter")[0] }); }
+    }
+
+    /// <summary>PDF gata de tipar: câte o pagină pe grupă (implicit), profesor sau sală; <c>id</c> restrânge la una singură.</summary>
+    [HttpGet("timetable/export/pdf")]
+    public async Task<IActionResult> ExportPdf([FromQuery] string academicYear, [FromQuery] int semester,
+        [FromQuery] string view = "group", [FromQuery] Guid? id = null)
+    {
+        if (!Enum.TryParse<ExportView>(view, true, out var v))
+            return BadRequest(new { Error = "Vizualizarea trebuie să fie group, professor, room sau all." });
+        try
+        {
+            var bytes = await export.PdfAsync(academicYear, semester, v, id);
+            return File(bytes, "application/pdf", $"orar-{academicYear}-sem{semester}-{view}.pdf");
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or ArgumentException)
+        { return BadRequest(new { Error = ex.Message.Split(" (Parameter")[0] }); }
+    }
+
     // ===== Săli =====
     [HttpGet("rooms")]
     public async Task<IActionResult> GetRooms() =>
