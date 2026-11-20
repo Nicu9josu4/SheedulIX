@@ -218,6 +218,7 @@ document.addEventListener('alpine:init', () => {
             'import': 'Import date din Excel',
             'availability': 'Disponibilitate cadre didactice',
             'timetable': 'Orar',
+            'rooms': 'Configurare săli',
             'qualifications': 'Calificări profesori',
             'workload': 'Model de calcul al normei'
         },
@@ -471,6 +472,11 @@ document.addEventListener('alpine:init', () => {
                 await this.loadTimetableEntries();
             } catch (e) { t.error = 'Nu s-a putut contacta serverul.'; }
             finally { t.busy = false; }
+        },
+
+        async loadRooms() {
+            try { this.tt.rooms = await fetch(`${API_BASE_URL}/rooms`).then(r => r.json()); }
+            catch (e) { this.tt.roomError = 'Nu s-au putut încărca sălile.'; }
         },
 
         async addRoom() {

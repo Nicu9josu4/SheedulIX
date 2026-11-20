@@ -31,7 +31,8 @@ Deschide în browser adresa pe care ți-a dat-o administratorul (pentru o instal
 | **Import date** | Încărcarea datelor dintr-un fișier Excel |
 | **Calificări** | Ce discipline și în ce limbi poate preda fiecare profesor |
 | **Model de calcul** | Normele și coeficienții anului universitar |
-| **Orar** | Generarea, vizualizarea și exportul orarului, plus sălile |
+| **Orar** | Generarea, vizualizarea și exportul orarului |
+| **Săli** | Configurarea sălilor (cod, corp, tip, capacitate, stare) |
 | **Disponibilitate** | Zilele și orele în care poate preda fiecare profesor |
 
 ## 3. Fluxul recomandat, pas cu pas
@@ -47,8 +48,9 @@ Deschide în browser adresa pe care ți-a dat-o administratorul (pentru o instal
 | 1 | **Grupe & Subgrupe** | Adaugi grupele (subgrupele se creează automat peste 26 de studenți) |
 | 2 | **Disponibilitate** | Marchezi zilele și orele fiecărui profesor |
 | 3 | **Sarcină Didactică** | Repartizezi orele; platforma verifică regulile și norma |
-| 4 | **Orar** | Adaugi sălile și generezi orarul |
-| 5 | **Orar** | Exporți în Excel sau PDF |
+| 4 | **Săli** | Adaugi sălile (corp, capacitate, tip) |
+| 5 | **Orar** | Generezi orarul |
+| 6 | **Orar** | Exporți în Excel sau PDF |
 
 > **Înainte de prima repartizare** pregătește, în această ordine: programele de studii și curriculumurile lor (secțiunea 3.1), calificările profesorilor (secțiunea 3.2) și modelul de calcul al anului (secțiunea 3.3). Limbile RO, RU și EN există deja.
 

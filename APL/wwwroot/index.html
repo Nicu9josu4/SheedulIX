@@ -55,6 +55,9 @@
                 <button @click="currentTab = 'timetable'; loadTimetable()" :class="currentTab === 'timetable' ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800 hover:text-white'" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition">
                     <i class="fa-solid fa-table-cells w-5"></i><span>Orar</span>
                 </button>
+                <button @click="currentTab = 'rooms'; loadRooms()" :class="currentTab === 'rooms' ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800 hover:text-white'" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition">
+                    <i class="fa-solid fa-door-open w-5"></i><span>Săli</span>
+                </button>
                 <button @click="currentTab = 'qualifications'" :class="currentTab === 'qualifications' ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800 hover:text-white'" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition">
                     <i class="fa-solid fa-certificate w-5"></i><span>Calificări</span>
                 </button>
@@ -887,7 +890,7 @@
                                 <span x-show="tt.busy"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Se calculează (până la <span x-text="tt.limit"></span> s)...</span>
                             </button>
                         </div>
-                        <p class="text-xs text-slate-500">Se folosesc repartizările din ecranul „Sarcină didactică”, disponibilitățile profesorilor și sălile de mai jos. Generarea înlocuiește orarul anterior al aceluiași semestru.</p>
+                        <p class="text-xs text-slate-500">Se folosesc repartizările din ecranul „Sarcină didactică”, disponibilitățile profesorilor și sălile din meniul „Săli”. Generarea înlocuiește orarul anterior al aceluiași semestru.</p>
                         <div x-show="tt.error" class="bg-red-50 border border-red-200 text-red-700 text-sm rounded p-3" x-text="tt.error"></div>
 
                         <div x-show="tt.summary" class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
@@ -961,7 +964,10 @@
                         </table>
                     </div>
 
-                    <!-- Săli -->
+                </div>
+
+                <!-- SĂLI -->
+                <div x-show="currentTab === 'rooms'" x-cloak class="space-y-6 max-w-6xl">
                     <div class="bg-white p-6 rounded-xl border shadow-sm space-y-3">
                         <h3 class="font-bold text-slate-700 text-lg border-b pb-2">Săli</h3>
                         <div class="flex flex-wrap items-end gap-2">

@@ -367,3 +367,7 @@ FodyWeavers.xsd
 # Personal created folders
 Exports/
 /samples
+
+# Export de date din baza (conține date personale) – nu se comite
+database/apl-data.sql
+*.dump
